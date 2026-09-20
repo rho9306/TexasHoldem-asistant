@@ -97,6 +97,7 @@ Texas/
 - [x] 2026-09-20 Task 3: Emscripten 工具链安装（C:\emsdk）+ WASM 构建管线 ping 跑通
 - [x] 2026-09-20 Task 4: HandRange 169格静态模型（类索引/类名/组合数）+ 引擎测试框架（TDD）
 - [x] 2026-09-20 Task 5: 范围加权采样（占用避让+重采样兜底）+ liveCombos（TDD）
+- [x] 2026-09-20 Task 6: calculateEquityV2 范围化蒙特卡洛+范围透视+embind，6项基准全过
 
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 

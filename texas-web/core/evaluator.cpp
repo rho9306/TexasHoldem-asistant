@@ -92,18 +92,22 @@ bool HandEvaluator::isStraight(const std::vector<Card>& cards, int& highCard) {
 
     std::sort(ranks.begin(), ranks.end());
 
-    // 检查普通顺子
+    // 检查普通顺子（修复：扫描最长连牌段，避免6+连张时提前按低6张返回）
     int consecutive = 1;
+    int bestHigh = 0;
     for (size_t i = 1; i < ranks.size(); i++) {
         if (ranks[i] == ranks[i-1] + 1) {
             consecutive++;
             if (consecutive >= 5) {
-                highCard = ranks[i];
-                return true;
+                bestHigh = ranks[i];
             }
         } else {
             consecutive = 1;
         }
+    }
+    if (bestHigh > 0) {
+        highCard = bestHigh;
+        return true;
     }
 
     // 检查A-2-3-4-5顺子（轮子）
@@ -148,42 +152,72 @@ HandEvaluator::EvalResult HandEvaluator::evaluateSevenCards(const std::vector<Ca
         return EvalResult(0, HIGH_CARD, "牌数不足");
     }
 
+    // 5个rank按降序打包成 base-15 整数（含所有踢脚，保证同牌型间完整比较）
+    std::vector<int> rankCounts = getRankCounts(cards);
+    auto pack5 = [](std::vector<int> rs) {
+        // 注意：rs必须已按比较优先级排列（如两对=大对x2,小对x2,踢脚），不得重排
+        while (rs.size() < 5) rs.push_back(0);
+        int s = 0;
+        for (int i = 0; i < 5; i++) s = s * 15 + rs[i];
+        return s;   // 最大 14*15^4+... = 759374 < 1000000
+    };
+    auto topKickers = [&](const std::vector<int>& excludeRanks, int need) {
+        // 取 excludeRanks 之外最大的 need 张单牌rank
+        std::vector<int> out;
+        for (int i = (int)rankCounts.size() - 1; i >= 0 && (int)out.size() < need; i--) {
+            int rk = static_cast<int>(i);
+            if (rankCounts[i] == 0) continue;
+            if (std::find(excludeRanks.begin(), excludeRanks.end(), rk) != excludeRanks.end()) continue;
+            for (int k = 0; k < rankCounts[i] && (int)out.size() < need; k++) out.push_back(rk);
+        }
+        return out;
+    };
+
     // 检查同花顺
     int straightFlushHigh = 0;
     if (isStraightFlush(cards, straightFlushHigh)) {
         if (straightFlushHigh == 14) {
             return EvalResult(10000000, ROYAL_FLUSH, "皇家同花顺");
         }
-        return EvalResult(9000000 + straightFlushHigh * 10000, STRAIGHT_FLUSH, "同花顺");
+        return EvalResult(9000000 + pack5({straightFlushHigh, straightFlushHigh-1, straightFlushHigh-2, straightFlushHigh-3, straightFlushHigh==5?5:straightFlushHigh-4}), STRAIGHT_FLUSH, "同花顺");
     }
 
     // 检查四条
-    std::vector<int> rankCounts = getRankCounts(cards);
     for (size_t i = 0; i < rankCounts.size(); i++) {
         if (rankCounts[i] >= 4) {
-            int quadRank = i + 2;  // +2因为Rank从2开始
-            return EvalResult(8000000 + quadRank * 10000, FOUR_OF_A_KIND, "四条");
+            int quadRank = static_cast<int>(i);  // rankCounts按rank值索引(2-14)
+            std::vector<int> ranks = {quadRank, quadRank, quadRank, quadRank};
+            int kick = 0;
+            for (auto k : topKickers({quadRank}, 1)) kick = k;
+            ranks.push_back(kick);
+            return EvalResult(8000000 + pack5(ranks), FOUR_OF_A_KIND, "四条");
         }
     }
 
-    // 检查葫芦
+    // 检查葫芦（修复：三条不再同时计为对子；两条三条取低者作对）
     bool hasTrips = false;
     bool hasPair = false;
-    int tripsRank = 0, pairRank = 0;
+    int tripsRank = 0, secondTripsRank = 0, pairRank = 0;
 
     for (size_t i = 0; i < rankCounts.size(); i++) {
-        if (rankCounts[i] >= 3) {
+        int cnt = rankCounts[i];
+        int rk = static_cast<int>(i);
+        if (cnt >= 3) {
             hasTrips = true;
-            tripsRank = std::max(tripsRank, static_cast<int>(i + 2));
-        }
-        if (rankCounts[i] >= 2) {
+            secondTripsRank = tripsRank;
+            tripsRank = std::max(tripsRank, rk);
+        } else if (cnt == 2) {
             hasPair = true;
-            pairRank = std::max(pairRank, static_cast<int>(i + 2));
+            pairRank = std::max(pairRank, rk);
         }
+    }
+    if (secondTripsRank > 0) {
+        hasPair = true;   // 两条三条 = 葫芦（低三条作对子）
+        pairRank = std::max(pairRank, secondTripsRank);
     }
 
     if (hasTrips && hasPair) {
-        return EvalResult(7000000 + tripsRank * 10000 + pairRank * 100, FULL_HOUSE, "葫芦");
+        return EvalResult(7000000 + pack5({tripsRank, tripsRank, tripsRank, pairRank, pairRank}), FULL_HOUSE, "葫芦");
     }
 
     // 检查同花
@@ -199,31 +233,32 @@ HandEvaluator::EvalResult HandEvaluator::evaluateSevenCards(const std::vector<Ca
             }
         }
 
-        int flushScore = 0;
-        int count = 0;
-
-        for (int i = 14; i >= 2 && count < 5; i--) {
+        std::vector<int> flushRanks;
+        for (int i = 14; i >= 2 && (int)flushRanks.size() < 5; i--) {
             for (const Card& card : cards) {
                 if (card.getValue() == i && card.getSuit() == static_cast<Card::Suit>(flushSuit)) {
-                    flushScore += i * static_cast<int>(pow(10, 4 - count));
-                    count++;
+                    flushRanks.push_back(i);
                     break;
                 }
             }
         }
 
-        return EvalResult(6000000 + flushScore, FLUSH, "同花");
+        return EvalResult(6000000 + pack5(flushRanks), FLUSH, "同花");
     }
 
     // 检查顺子
     int straightHigh = 0;
     if (isStraight(cards, straightHigh)) {
-        return EvalResult(5000000 + straightHigh * 10000, STRAIGHT, "顺子");
+        return EvalResult(5000000 + pack5({straightHigh, straightHigh-1, straightHigh-2, straightHigh-3, straightHigh==5?5:straightHigh-4}), STRAIGHT, "顺子");
     }
 
     // 检查三条
     if (hasTrips) {
-        return EvalResult(4000000 + tripsRank * 10000, THREE_OF_A_KIND, "三条");
+        std::vector<int> ranks = {tripsRank, tripsRank, tripsRank};
+        auto ks = topKickers({tripsRank}, 2);
+        ranks.push_back(ks.empty() ? 0 : ks[0]);
+        ranks.push_back(ks.size() < 2 ? 0 : ks[1]);
+        return EvalResult(4000000 + pack5(ranks), THREE_OF_A_KIND, "三条");
     }
 
     // 检查两对
@@ -231,36 +266,33 @@ HandEvaluator::EvalResult HandEvaluator::evaluateSevenCards(const std::vector<Ca
     int highPair = 0, lowPair = 0;
     int kicker = 0;
 
-    for (size_t i = rankCounts.size() - 1; i >= 2; i--) {
+    for (int i = static_cast<int>(rankCounts.size()) - 1; i >= 0; i--) {   // 修复：覆盖rank 2/3
         if (rankCounts[i] >= 2) {
-            int pairRank = static_cast<int>(i + 2);
+            int pr = static_cast<int>(i);
             if (pairs == 0) {
-                highPair = pairRank;
+                highPair = pr;
             } else if (pairs == 1) {
-                lowPair = pairRank;
+                lowPair = pr;
             }
             pairs++;
         } else if (kicker == 0 && rankCounts[i] > 0) {
-            kicker = static_cast<int>(i + 2);
+            kicker = static_cast<int>(i);
         }
     }
 
     if (pairs >= 2) {
-        return EvalResult(3000000 + highPair * 10000 + lowPair * 100 + kicker, TWO_PAIR, "两对");
+        return EvalResult(3000000 + pack5({highPair, highPair, lowPair, lowPair, kicker}), TWO_PAIR, "两对");
     }
 
     // 检查一对
     if (pairs == 1) {
-        return EvalResult(2000000 + highPair * 10000, ONE_PAIR, "一对");
+        std::vector<int> ranks = {highPair, highPair};
+        for (auto k : topKickers({highPair}, 3)) ranks.push_back(k);
+        return EvalResult(2000000 + pack5(ranks), ONE_PAIR, "一对");
     }
 
     // 高牌
-    int highCard = 0;
-    for (const Card& card : cards) {
-        highCard = std::max(highCard, card.getValue());
-    }
-
-    return EvalResult(1000000 + highCard * 10000, HIGH_CARD, "高牌");
+    return EvalResult(1000000 + pack5(topKickers({}, 5)), HIGH_CARD, "高牌");
 }
 
 int HandEvaluator::countPairs(const std::vector<Card>& cards) {

@@ -1,7 +1,11 @@
 #include <cassert>
 #include <cstdio>
 #include <string>
+#include <cmath>
+#include <vector>
+#include <cstdint>
 #include "range.h"
+#include "equity_v2.h"
 #define CHECK(cond) do{ if(!(cond)){ printf("FAIL %s:%d: %s\n",__FILE__,__LINE__,#cond); fails++; } }while(0)
 int fails = 0;
 static void testRangeStatic() {
@@ -85,4 +89,60 @@ static void testRangeSample() {
   CHECK(full.liveCombos(used) == 1326);
 }
 
-int main(){ testRangeStatic(); testRangeSample(); printf(fails? "FAILED %d\n":"ALL PASS\n", fails); return fails?1:0; }
+static std::vector<std::vector<uint8_t>> uniformMask() {
+  return { std::vector<uint8_t>(169, 100) };
+}
+static void testEquityV2() {
+  // 基准1：皇家同花顺已成立 vs 任意范围 = 100% 胜
+  {
+    auto r = calculateEquityV2({"As","Ks"}, {"Ts","Js","Qs","2h","3d"}, uniformMask(), 500);
+    CHECK(r.winRate == 1.0);
+  }
+  // 基准2：AA vs 1个均匀随机 ≈ 85% → effective = win + tie/2 ∈ (83,87)
+  {
+    auto r = calculateEquityV2({"As","Ad"}, {}, uniformMask(), 5000);
+    double eff = r.winRate + r.tieRate * 0.5;
+    CHECK(eff > 0.83 && eff < 0.87);
+  }
+  // 基准3：AA vs 前10%范围（计划的22类清单，约130组合）≈ 84.5%±1.5
+  // 校准依据（§9.1）：该清单经独立穷举验证（无采样器、独立Python评估器交叉验证0分歧），
+  // AA vs 此范围 = 84.5%；计划中"≈82%"的先验与其自带的清单不一致，故按实测+穷举校准
+  {
+    const char* top22[] = {"AA","KK","QQ","JJ","TT","99","88","77","AKs","AQs","AJs","ATs","AKo","AQo","A9s","AJo","KQs","KJs","KQo","A8s","K9s","QJs"};
+    std::vector<uint8_t> m(169, 0);
+    for (auto* name : top22)
+      for (int i = 0; i < 169; i++)
+        if (std::string(HandRange::className(i)) == name) m[i] = 100;
+    auto r = calculateEquityV2({"As","Ad"}, {}, {m}, 5000);
+    double eff = r.winRate + r.tieRate * 0.5;
+    CHECK(eff > 0.83 && eff < 0.86);
+  }
+  // 基准4：重复模拟稳定性：同seed完全可复现；不同seed差异 <4%（2000次MC统计噪声约±1.5%）
+  {
+    auto a = calculateEquityV2({"As","Ks"}, {}, uniformMask(), 2000, 42);
+    auto b = calculateEquityV2({"As","Ks"}, {}, uniformMask(), 2000, 42);
+    CHECK(a.winRate == b.winRate);
+    auto c = calculateEquityV2({"As","Ks"}, {}, uniformMask(), 2000, 777);
+    CHECK(std::abs(a.winRate - c.winRate) < 0.04);
+  }
+  // 基准5：范围透视 totalCombos：全范围占用A♠A♦后 = 1326 - 5(AA) - 72(12异花Ax各失6) - 24(12同花Ax各失2) = 1225
+  {
+    auto r = calculateEquityV2({"As","Ad"}, {}, uniformMask(), 100);
+    CHECK(r.rangeStats.totalCombos == 1225);
+  }
+  // 基准6：72o vs 1随机 ≈ 35%±2
+  {
+    auto r = calculateEquityV2({"7c","2d"}, {}, uniformMask(), 5000);
+    double eff = r.winRate + r.tieRate * 0.5;
+    CHECK(eff > 0.33 && eff < 0.37);
+  }
+  // 透视归一：uniform 全范围 beat+tie+lose ≈ 100%
+  {
+    auto r = calculateEquityV2({"As","Ks"}, {}, uniformMask(), 2000);
+    double sum = r.rangeStats.beatPct + r.rangeStats.tiePct + r.rangeStats.losePct;
+    CHECK(sum > 99.0 && sum < 101.0);
+    CHECK(r.lossRate > 0 && r.lossRate < 1);
+  }
+}
+
+int main(){ testRangeStatic(); testRangeSample(); testEquityV2(); printf(fails? "FAILED %d\n":"ALL PASS\n", fails); return fails?1:0; }
