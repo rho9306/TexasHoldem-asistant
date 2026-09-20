@@ -14,9 +14,11 @@ import { TYPE_DEFAULTS } from './strategy/ranges.js';
 import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
+import { renderSessionBar } from './ui/sessionBar.js';
+import { buildHandRecord, loadAll, saveHands, saveSessions, updateOpponentObservation } from './storage.js';
 
 document.getElementById('app').innerHTML = `
-  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span></header>
+  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="session-bar"></span></header>
   <main id="page-calc" class="page active"></main>
   <main id="page-gto" class="page"></main>
   <main id="page-history" class="page"></main>
@@ -34,7 +36,32 @@ function switchPage(id) {
   });
 }
 renderTabbar(document.getElementById('tabbar'), switchPage);
+renderSessionBar(document.getElementById('session-bar'));
 switchPage('calc');
+
+/** 记录本手：汇集 state → HandRecord 入库（FIFO），同步对手观察与会话计数，按钮短暂反馈"已记录" */
+window.__recordHand = () => {
+  const rec = buildHandRecord('未记录', { net: 0, ev: state.result?.evCall ?? 0 });
+  const { hands, sessions } = loadAll();
+  hands.push(rec);
+  saveHands(hands);
+  // 对手观察：多路底池无法逐人区分，粗粒度推断 sawVpip（call>0 或有人加注/跛入）
+  const sawVpip = state.call > 0 || state.raisesBefore > 0 || state.limpers > 0;
+  for (const o of state.opponents) updateOpponentObservation(o.id, sawVpip);
+  // 会话计数同步（无会话也照样记录，sessionId=''）
+  if (state.sessionId) {
+    const list = sessions.map(s => s.id === state.sessionId
+      ? { ...s, handsCount: (s.handsCount ?? 0) + 1, netResult: (s.netResult ?? 0) + (rec.result?.net ?? 0), evTotal: (s.evTotal ?? 0) + (rec.result?.ev ?? 0) }
+      : s);
+    saveSessions(list);
+  }
+  // 按钮反馈：短暂变"已记录"后还原
+  const btn = document.getElementById('record-hand-btn');
+  if (btn) {
+    btn.textContent = '✓ 已记录';
+    setTimeout(() => { btn.textContent = '✓ 记录本手到历史'; }, 1500);
+  }
+};
 
 const calcPage = document.getElementById('page-calc');
 let resultEl = null, strategyEl = null;
@@ -76,6 +103,7 @@ function renderCalc() {
   renderStrategyPanel(strategyEl, state.strategy, state.board.length);
   // 9. 记录本手（Task 22 接线 window.__recordHand）
   const rec = document.createElement('button');
+  rec.id = 'record-hand-btn';
   rec.textContent = '✓ 记录本手到历史';
   rec.style.cssText = 'width:calc(100% - 16px);margin:8px;background:var(--accent);border:none;border-radius:10px;color:#000;font-weight:700;padding:12px;';
   rec.addEventListener('click', () => window.__recordHand?.());
