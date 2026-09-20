@@ -94,6 +94,8 @@ Texas/
 - [x] 实施计划产出并自审：`docs/superpowers/plans/2026-09-20-poker-web-app-implementation.md`（27任务/6阶段，含 GTO 网格数据、接口签名表、引擎基准、部署工作流）
 - [x] 本交接文档同步更新（阶段A+勾选、当前阶段改写）
 
+- [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
+
 > ⏭️ **下一步：** 用户选择执行方式 → 按 Task 1（git 初始化）开始开发
 
 ---
