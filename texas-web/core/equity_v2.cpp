@@ -126,7 +126,8 @@ DecisionResult evaluateDecision(double winRate, double pot, double call,
 
     double diff = winRate - r.requiredEquity;
     double bias = adviceStyle == "conservative" ? 0.02 : adviceStyle == "aggressive" ? -0.02 : 0.0;
-    diff += bias;
+    // 方向：保守风格要求更大优势才进攻 → 有效diff减去偏置（=阈值抬高/优势打折）
+    diff -= bias;
 
     if (r.evRaise > r.evCall && r.evRaise > r.evCall * 1.3 && diff > 0.10) {
         r.advice = diff > 0.15 ? "强烈加注" : "加注"; r.adviceLevel = "raise";

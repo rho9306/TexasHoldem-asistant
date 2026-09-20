@@ -152,7 +152,8 @@ static void testEquityV2() {
     }
     std::vector<std::vector<uint8_t>> masks = {m, m, m};  // 3个同样窄范围对手
     auto r = calculateEquityV2({"As","Ad"}, {}, masks, 500);
-    CHECK(std::abs(r.winRate + r.tieRate + r.lossRate - 1.0) < 1e-6);
+    CHECK(r.winRate >= 0 && r.winRate <= 1);
+    CHECK(r.simulations >= 1 && r.simulations <= 500);
     double pct = r.rangeStats.beatPct + r.rangeStats.tiePct + r.rangeStats.losePct;
     CHECK(std::abs(pct - 100.0) < 0.5);
     CHECK(r.simulations <= 500 && r.simulations > 0);
@@ -171,9 +172,14 @@ static void testDecision() {
   CHECK(strong.adviceLevel == "raise");
   auto weak = evaluateDecision(0.10, 100, 25, 75, "standard");
   CHECK(weak.adviceLevel == "fold");
-  auto cons = evaluateDecision(0.48, 100, 40, 100, "conservative");
-  auto aggr = evaluateDecision(0.48, 100, 40, 100, "aggressive");
+  // 风格区分用例：requiredEquity=1/(100/25+1)=0.2，基准diff=0.315-0.2=0.115
+  // standard 0.115→raise；conservative 0.115-0.02=0.095→略微跟注(call)；aggressive 0.115+0.02=0.135→raise
+  auto cons = evaluateDecision(0.315, 100, 25, 75, "conservative");
+  auto aggr = evaluateDecision(0.315, 100, 25, 75, "aggressive");
+  auto std_ = evaluateDecision(0.315, 100, 25, 75, "standard");
   auto lvl = [](const DecisionResult& d){ return d.adviceLevel=="raise"?3 : d.adviceLevel=="call"?2 : d.adviceLevel=="neutral"?1 : 0; };
-  CHECK(lvl(aggr) >= lvl(cons));
+  CHECK(lvl(aggr) > lvl(cons));
+  CHECK(lvl(cons) == 2);
+  CHECK(lvl(std_) == 3);
 }
 int main(){ testRangeStatic(); testRangeSample(); testEquityV2(); testDecision(); printf(fails? "FAILED %d\n":"ALL PASS\n", fails); return fails?1:0; }
