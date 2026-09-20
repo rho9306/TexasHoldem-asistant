@@ -14,6 +14,9 @@ describe('charts', () => {
     const utg = getPreflopChart({position:'UTG', role:'open', effectiveStackBB:100});
     expect(gridCell(utg.grid, '72o')).toBe('F');
     expect(gridCell(utg.grid, 'AA')).toBe('R');
+    // 同花保持上三角原位（回归：此前按 row<col 误换到异花格）
+    expect(gridCell(utg.grid, 'A5s')).toBe('r');   // UTG 行0列9（A行同花混合）
+    expect(gridCell(utg.grid, 'A5o')).toBe('F');   // 下三角异花格
     // BTN 开牌显著宽于 UTG：数 R 格
     const rCount = g => g.join('').split('').filter(c => c === 'R').length;
     expect(rCount(open.grid)).toBeGreaterThan(rCount(utg.grid));

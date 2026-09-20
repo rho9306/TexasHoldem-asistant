@@ -14,8 +14,9 @@ export function handClassFor(cards) {
 export function gridCell(grid, handClass) {
   let row = RANKS.indexOf(handClass[0]);
   let col = RANKS.indexOf(handClass[1]);
-  // 异花类名高牌在前（如 72o）：映射到下三角（行=低牌，列=高牌）
-  if (row < col) [row, col] = [col, row];
+  // 上三角同花/下三角异花：异花类名高牌在前（如 72o）→ 映射到下三角（行=低牌，列=高牌）；
+  // 同花保持上三角原位（修复：不能按 row<col 判断，否则所有同花都被错换到异花格）
+  if (handClass[2] === 'o' && row < col) [row, col] = [col, row];
   return grid[row][col];
 }
 
