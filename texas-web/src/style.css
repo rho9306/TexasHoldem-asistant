@@ -17,3 +17,4 @@ button, .tap { min-height: 44px; }                     /* 触控目标约束 */
 .page { display: none; padding-bottom: 64px; }
 .page.active { display: block; }
 @media (min-width: 1024px) { #tabbar { display: none; } }   /* 电脑端在 Task 25 扩展 */
+.invalid { border-color: var(--danger) !important; }

@@ -109,6 +109,7 @@ Texas/
 - [x] 2026-09-20 Task 14: implied 隐含赔率 + tableDynamics 桌子动态适配器（阶段B策略层8模块全部完成）
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 - [x] 2026-09-20 Task 15: 设计令牌CSS+应用骨架+四标签路由+state store
+- [x] 2026-09-20 Task 16: cardPicker 选牌器 + potForm 底池输入校验
 
 > ⏭️ **下一步：** 用户选择执行方式 → 按 Task 1（git 初始化）开始开发
 
