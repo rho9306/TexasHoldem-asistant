@@ -13,4 +13,18 @@ describe('cardPicker', () => {
     btns.find(b => b.dataset.card === 'Qd').click();
     expect(picked).toEqual(['Ks', 'Qd']);
   });
+
+  it('双实例互不串扰', () => {
+    document.body.innerHTML = '<div id="cp"></div>';
+    let hole = null;
+    let board = null;
+    renderCardPicker(document.getElementById('cp'), { slots: 2, onPick: c => (hole = c) });
+    renderCardPicker(document.getElementById('cp'), { slots: 3, onPick: c => (board = c) });
+    const wraps = [...document.querySelectorAll('#cp .card')];
+    const click = (wrapIdx, card) =>
+      [...wraps[wrapIdx].querySelectorAll('button[data-card]')].find(b => b.dataset.card === card).click();
+    click(0, 'As'); click(1, '2h'); click(0, '3d'); click(1, '4c'); click(1, '5s');
+    expect(hole).toEqual(['As', '3d']);
+    expect(board).toEqual(['2h', '4c', '5s']);
+  });
 });

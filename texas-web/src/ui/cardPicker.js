@@ -1,9 +1,7 @@
 const RANKS = 'AKQJT98765432'.split('');
 const SUITS = [['s','♠'],['h','♥'],['d','♦'],['c','♣']];
-let picked = [];
-
 export function renderCardPicker(container, { slots, usedCards = [], onPick, title = '' }) {
-  picked = [];
+  const picked = [];
   const wrap = document.createElement('div');
   wrap.innerHTML = `<div class="card"><div class="dim">${title}</div><div class="picked num"></div><div class="grid"></div></div>`;
   const grid = wrap.querySelector('.grid');
@@ -29,4 +27,3 @@ export function renderCardPicker(container, { slots, usedCards = [], onPick, tit
   }
   container.appendChild(wrap);
 }
-export function clearCards() { picked = []; }
