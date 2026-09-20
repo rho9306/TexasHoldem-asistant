@@ -2,8 +2,8 @@
 
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
-**最后更新：** 2026-09-20（第三轮：**用户审阅通过 v4.0 设计文档**，实施计划已产出——`docs/superpowers/plans/2026-09-20-poker-web-app-implementation.md`，27个任务、6阶段：基础设施→引擎→策略层→手机UI→数据复盘→电脑端与上线）
-**当前阶段：** 用户选择执行方式（子代理逐任务执行 / 本会话批量执行）→ 按 Task 1 开始开发（详见 §五）
+**最后更新：** 2026-09-20（第四轮·开发中**用户要求暂停**：Task 1-19 已完成并通过"实现者+审查者"双重审查（含4轮修复回路），Task 20 代码已提交**待审查**，Task 21-27 未开始。已解决/进行中/未解决清单见 **§八**）
+**当前阶段：** ⏸️ **已暂停**。恢复开发：先按 §八"如何恢复"审查 Task 20，然后按 Task 21 → 27 顺序继续（当前测试基线：61 vitest + 引擎测试全绿，`npm run build` 通过）
 
 ---
 
@@ -112,10 +112,10 @@ Texas/
 - [x] 2026-09-20 Task 16: cardPicker 选牌器 + potForm 底池输入校验
 - [x] 2026-09-20 Task 17: positionBar 位置条+翻前场景 stepper + opponentCards 对手档案卡
 - [x] 2026-09-20 Task 18: calc.js recalc 编排（范围→WASM→决策）+ resultPanel 仪表盘
-- [x] 2026-09-20 Task 19: 计算页完整装配（策略卡组/桌子画像/对手抽屉/承接项a-d）
-- [x] 2026-09-20 Task 20: handMatrix 13×13复用组件 + chartViewer GTO图页
+- [x] 2026-09-20 Task 19: 计算页完整装配（策略卡组/桌子画像/对手抽屉/承接项a-d）——提交至 035bc97（含修复回合：类型快选同步type字段）
+- [⏸️] 2026-09-20 Task 20: handMatrix 13×13复用组件 + chartViewer GTO图页 —— **代码已提交（79e6547）但尚未派审查者审查**（暂停点）
 
-> ⏭️ **下一步：** 用户选择执行方式 → 按 Task 1（git 初始化）开始开发
+> ⏸️ **暂停点：** Task 20 审查未做，Task 21-27 未开始。恢复指引见 §八。
 
 ---
 
@@ -132,13 +132,17 @@ Texas/
 ### 阶段A+：实施计划 ✅ 已完成（2026-09-20）
 7. [x] 用户审阅通过 v4.0 设计文档；已调用 `superpowers:writing-plans` 技能产出《docs/superpowers/plans/2026-09-20-poker-web-app-implementation.md》——27个任务、6阶段（阶段0基础设施→A引擎→B策略层→C手机UI→D数据复盘→E电脑端与上线），每任务含 TDD 步骤/完整代码/验证命令/提交点，文末含计划自审记录
 
-### 阶段B：网页版开发（按实施计划 Task 1-27 执行，⏳ 下一步：选执行方式后从 Task 1 开始）
-8. ⬜ 搭建 `texas-web/` 项目（Vite + 原生JS/CSS 无框架；Emscripten 编译WASM；新增 `core/range.*` 范围采样）
-9. ⬜ 引擎层：`calculateEquityV2` 范围化蒙特卡洛 + rangeStats 透视；基准测试（v3.0 全部基准 + AA vs 前10%范围≈82%±2 + 重复模拟差<2%）
-10. ⬜ 策略层JS：GTO/Nash图表（约16张内嵌表）、纹理/尺寸/MDF/outs/隐含赔率/桌子动态（纯函数+单测）
-11. ⬜ 手机四标签UI（计算/GTO图/历史/设置）+ 电脑四栏工作台（≥1024px，<1280px降级）+ F12双视口验证
-12. ⬜ 数据层：四存储键 + 1000手FIFO + 导出/导入JSON；会话/复盘/弱点矩阵
-13. ⬜ 部署上线（GitHub Pages 或 Cloudflare Pages，¥0）+ 真机验收
+### 阶段B：网页版开发（按实施计划 Task 1-27 执行）— 进度 20/27，⏸️ 暂停于 Task 20 审查
+
+| 计划条目 | 对应任务 | 状态 |
+|---|---|---|
+| 8. 搭建 texas-web 项目 | Task 1-3 | ✅ 完成（git仓库/Vite+Vitest骨架/Emscripten管线） |
+| 9. 引擎层 calculateEquityV2+基准 | Task 4-7 | ✅ 完成（6项基准+守恒+风格区分全过；⭐evaluator 4处缺陷修复，见§八决策1） |
+| 10. 策略层JS（图表/纹理/尺寸/MDF/outs/隐含赔率/桌子动态） | Task 8-14 | ✅ 完成（8模块，35测试） |
+| 11. 手机四标签UI | Task 15-20 | 🔄 Task 15-19 ✅；**Task 20 代码已提交待审查**；设置页（Task 21）未开始 |
+| 11b. 电脑四栏工作台+F12双视口 | Task 25 | ⬜ 未开始 |
+| 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | ⬜ 未开始 |
+| 13. 部署上线+真机验收 | Task 26-27 | ⬜ 未开始（PWA基础在 Task 26；需用户提供 GitHub 账号） |
 
 ### 阶段C：远期可选
 12. ⬜ PWA增强（manifest、Service Worker离线缓存、添加到主屏幕引导）
@@ -169,3 +173,49 @@ Texas/
 | `poker_assist/README.md` | ✅ 有效 | Windows版使用说明 |
 | ~~`2026-08-23-poker-calculator-design.md`~~ | 🗑️ 已删除 | 旧版混合设计（含硬件章节），算法内容已并入设计文档 |
 | ~~`ESP32-Hardware-BOM-嘉立创.md` / `-完整版.md`~~ | 🗑️ 已删除 | 硬件采购清单，随硬件方案废弃 |
+
+---
+
+## 八、暂停时状态清单（2026-09-20，恢复开发前必读）
+
+### 8.1 如何恢复
+
+1. **先审查 Task 20**（代码已提交 79e6547，未审查）：
+   ```bash
+   cd /c/Users/36327/Desktop/Texas
+   bash "/c/Users/36327/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.2/skills/subagent-driven-development/scripts/review-package" 035bc97 HEAD
+   # 然后派 sonnet 审查子代理，输入：简报 .git/sdd/task-20-brief.md + 报告 .git/sdd/task-20-report.md + 审查包路径
+   ```
+2. **环境要点**（每个新终端跑 em++ 前）：
+   ```bash
+   export EMSDK_PYTHON=/c/Users/36327/AppData/Local/Programs/Python/Python311/python.exe
+   source /c/emsdk/emsdk_env.sh
+   ```
+   - 引擎测试命令需 `-Icore` 且输出 `.cjs`（node 环境）；Node24 下 emscripten 产物必须 .cjs 后缀才能 require
+3. **继续 Task 21-27**（简报生成：`scripts/task-brief <计划文件> <N>`；任务顺序：21设置页→22存储+记录→23导出导入→24历史复盘→25电脑四栏→26 PWA→27部署）。每任务完成必须更新本交接文档。
+4. **进度台账**：`.git/sdd/progress.md`（含每任务提交区间与遗留项）；任务简报/报告/审查包都在 `.git/sdd/`。
+5. **已知承接项（后续任务必须落实）**：Task 25 的键盘快捷键 `window.__clearCards` 对应导出已在 Task 16 删除（补回或删该行）；Task 25/27 承接 F12 双视口手动走查与真机验收（子代理环境无浏览器，Task 15/19 的可视检查已声明分期）。
+
+### 8.2 待用户决策（⏳ 恢复时先问）
+
+| # | 问题 | 背景 |
+|---|------|------|
+| 1 | **poker_assist 原版 evaluator 的4处数学缺陷是否回修？** | Task 6 发现原版"三条误判葫芦/顺子提前截断/无踢脚编码伪平局/rankCounts 索引偏移"，texas-web 副本已修复并经验证；原版（Windows控制台版）仍带病运行。回修=改 poker_assist/core/evaluator.cpp 同4处 |
+| 2 | **poker_assist/debug_test*.cpp（8个未跟踪调试文件）去留？** | 历史调试遗留，一直未纳入 git。可删除、或移入 docs/ 归档、或加入 .gitignore |
+| 3 | **部署目标账号**（Task 27 需要） | GitHub Pages 需要用户提供 GitHub 账号并建空仓库；或改用 Cloudflare Pages |
+
+### 8.3 已挂起的 Minor 项（不影响功能，最终全分支审查时统一裁量）
+
+- **引擎**（T3-T7）：复制的6个core文件缺结尾换行符；className 静态buf非重入（单线程低风险）；engine_test 的 fails 为全局int（单文件可用）；无 idx 越界防护；sample 内 Card 重构代码块重复2处；模拟测试容差2.2σ（种子固定无flake）；simulations 边界断言重复2处
+- **策略层**（T8-T14）：topClasses widthPct 未 clamp；rank 生成脚本 `calculateEquityV2Js||calculateEquityV2` 双兜底待收敛；rank-order.json 缺末尾换行；charts.js 表注释宽度未标口径（格数口径≠组合数口径，勿混用）；OPEN.MP 第13行为推测补齐；ranges.test.js 观察用例的注释理由失实（代码正确）；LP/LAG 类型区分度在窄基础表饱和（设计§5.7 可补记）；clamp(8,60) 统一应用于观察/滑条（应加注释）；implied.js TYPE_DEFAULTS 死import；A低轮子听牌不检测（brief口径，与texture的wheel修正不一致）；streetsLeft 非1/2 静默按2
+- **UI**（T15-T20）：cardPicker title 参数 innerHTML 插值（当前全常量零风险）；streetOf length>5 默认语义；掩码构造循环缺逐迭代 finally；resultPanel 无单测（brief未要求）；"一键全员预设"硬编码 TAG（后续可加类型选择器）；mask 模式图例语义（T20 审查未做，暂记）
+- **计划文本已知的偏差记录**（执行时已按正确语义修正，此处留痕）：风格偏置方向（计划伪代码 `diff+=bias` 反了，实际 `diff-=`）；potOdds=v1语义 pot/call；SPR=8 属'5-8'档；采样累积表按权重×组合数；rank索引换算=14−Card::Rank；handClassFor 异花高牌在前；OPEN.MP 补行与两处14字符行修复
+
+### 8.4 已解决的重要问题（留档备查）
+
+- evaluator 4处数学缺陷修复 + Deck(seed) 不洗牌调用点修复（Task 6，opus 审查逐案手验）
+- charts.js gridCell 异花查表未转置（Task 10 发现，Task 9 测试恰好被对称格掩盖）
+- evaluateDecision 保守偏置方向反转（Task 7 审查发现，修复+区分力测试）
+- cardPicker 多实例 picked 状态串扰（Task 16 主动发现，闭包化+双实例测试）
+- 对手抽屉类型快选不同步 type 字段（Task 19 审查发现，修复+测试）
+- 计划自身笔误共9处（测试期望值/参数序/边界口径），均在执行中以"设计约定优先"修正并留痕于各任务报告
