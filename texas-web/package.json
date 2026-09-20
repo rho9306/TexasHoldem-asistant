@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:wasm": "em++ -O3 --std=c++17 --bind -Icore -s MODULARIZE=1 -s EXPORT_NAME=createPokerCore -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web core/card.cpp core/deck.cpp core/evaluator.cpp core/range.cpp core/equity_v2.cpp wasm/bindings.cpp -o src/wasm/poker_core.js",
+    "gen:rank": "em++ -O1 --std=c++17 --bind -s MODULARIZE=1 -s EXPORT_NAME=createPokerCore -s ENVIRONMENT=node -Icore core/card.cpp core/deck.cpp core/evaluator.cpp core/range.cpp core/equity_v2.cpp wasm/bindings.cpp -o .engine-test/rankgen.cjs && node tests/generate-rank-table.mjs",
     "test:engine": "em++ -O1 --std=c++17 -s ENVIRONMENT=node -s EXIT_RUNTIME=1 -Icore tests/engine_test.cpp core/range.cpp core/equity_v2.cpp core/card.cpp core/deck.cpp core/evaluator.cpp -o .engine-test/engine_test.cjs && node .engine-test/engine_test.cjs"
   },
   "devDependencies": {
