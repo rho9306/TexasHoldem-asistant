@@ -7,9 +7,9 @@ export function cBetSuggestion(textureLabel, adviceStyle = 'standard') {
 
 export function sprInfo(effectiveStack, pot) {
   const spr = pot > 0 ? effectiveStack / pot : Infinity;
-  // 按 toFixed(2) 后的值分档（与返回值一致）；SPR 恰为 8 归入高SPR档（测试约定）
+  // 按 toFixed(2) 后的值分档（与返回值一致）；设计§5.4C：SPR≤4 打光 / SPR>8（严格）控池 / 中间 '5-8'（含8）
   const sprR = +spr.toFixed(2);
-  const category = sprR <= 4 ? '≤4' : sprR < 8 ? '5-8' : '>8';
+  const category = sprR <= 4 ? '≤4' : sprR <= 8 ? '5-8' : '>8';
   const note = sprR <= 4 ? '低SPR：顶对以上可倾向打光' : sprR > 8 ? '高SPR：弱顶对注意控池' : '中SPR：正常尺度决策';
   return { spr: sprR, category, note };
 }

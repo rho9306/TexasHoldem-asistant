@@ -13,7 +13,8 @@ describe('sizing', () => {
   it('SPR 分档', () => {
     expect(sprInfo(40, 100).spr).toBe(0.4);
     expect(sprInfo(40, 100).category).toBe('≤4');
-    expect(sprInfo(800, 100).category).toBe('>8');
+    expect(sprInfo(800, 100).category).toBe('5-8');
+    expect(sprInfo(900, 100).category).toBe('>8');
   });
   it('河牌价值诈唬比', () => {
     expect(riverValueBluffRatio(1/3)).toBe('3:1');
