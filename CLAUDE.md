@@ -113,6 +113,7 @@ Texas/
 - [x] 2026-09-20 Task 17: positionBar 位置条+翻前场景 stepper + opponentCards 对手档案卡
 - [x] 2026-09-20 Task 18: calc.js recalc 编排（范围→WASM→决策）+ resultPanel 仪表盘
 - [x] 2026-09-20 Task 19: 计算页完整装配（策略卡组/桌子画像/对手抽屉/承接项a-d）
+- [x] 2026-09-20 Task 20: handMatrix 13×13复用组件 + chartViewer GTO图页
 
 > ⏭️ **下一步：** 用户选择执行方式 → 按 Task 1（git 初始化）开始开发
 
