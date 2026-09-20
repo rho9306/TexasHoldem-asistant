@@ -1,0 +1,19 @@
+:root {
+  --bg: #0d1117; --bg-card: #161b22; --bg-hover: #1c2129;
+  --border: #30363d; --text: #e6edf3; --text-dim: #8b949e;
+  --accent: #22c55e; --accent-dim: #16a34a; --danger: #f85149;
+  --warn: #d29922; --blue: #58a6ff; --orange: #f0883e;
+  --mono: Consolas, ui-monospace, monospace;
+  --sans: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; }
+button, .tap { min-height: 44px; }                     /* 触控目标约束 */
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin: 8px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+#tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: var(--bg-card); border-top: 1px solid var(--border); z-index: 10; }
+#tabbar button { flex: 1; background: none; border: none; color: var(--text-dim); font-size: 13px; padding: 8px 0; }
+#tabbar button.active { color: var(--accent); }
+.page { display: none; padding-bottom: 64px; }
+.page.active { display: block; }
+@media (min-width: 1024px) { #tabbar { display: none; } }   /* 电脑端在 Task 25 扩展 */

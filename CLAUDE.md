@@ -108,6 +108,7 @@ Texas/
 - [x] 2026-09-20 Task 13: sizing c-bet尺寸/SPR/河牌价值诈唬比/防守建议
 - [x] 2026-09-20 Task 14: implied 隐含赔率 + tableDynamics 桌子动态适配器（阶段B策略层8模块全部完成）
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
+- [x] 2026-09-20 Task 15: 设计令牌CSS+应用骨架+四标签路由+state store
 
 > ⏭️ **下一步：** 用户选择执行方式 → 按 Task 1（git 初始化）开始开发
 
