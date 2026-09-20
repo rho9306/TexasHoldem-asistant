@@ -27,6 +27,7 @@ document.getElementById('app').innerHTML = `
   <nav id="tabbar"></nav>`;
 // GTO 图页：每次切入重渲，跟随当前 state（用户点选场景后以所选为准）
 let gtoScenario = null;
+let importBtnTimer = null; // 导入按钮反馈还原 timer（防连点竞争）
 function switchPage(id) {
   baseSwitchPage(id);
   if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
@@ -39,7 +40,7 @@ function switchPage(id) {
       const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
       const a = document.createElement('a');
       a.href = url; a.download = name; a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 0); // 延迟回收，兼容旧Safari同步click丢失下载
     },
     onImport(text, readError) {
       const r = readError ? { ok: false, error: '文件读取失败' } : importAll(text);
@@ -47,12 +48,14 @@ function switchPage(id) {
         const d = loadAll();
         setPatch({ opponents: d.opponents, settings: d.settings ?? state.settings });
       }
+      if (r.ok) switchPage('settings'); // 先重渲使控件反映导入后的 settings
+      // 反馈写在重渲后的新 DOM 上，避免被立即重建冲掉；timer 防连点竞争
       const btn = document.getElementById('s-import');
       if (btn) {
+        clearTimeout(importBtnTimer);
         btn.textContent = r.ok ? '✓ 导入成功' : `✗ ${r.error}`;
-        setTimeout(() => { btn.textContent = '导入 JSON'; }, 2000);
+        importBtnTimer = setTimeout(() => { btn.textContent = '导入 JSON'; }, 2000);
       }
-      if (r.ok) switchPage('settings'); // 重渲使控件反映导入后的 settings
     },
     onClear() { /* TODO: Task 24 清空接线（含确认流程） */ },
   });
