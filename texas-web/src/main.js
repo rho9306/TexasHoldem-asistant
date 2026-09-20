@@ -17,6 +17,8 @@ import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
 import { buildHandRecord, loadAll, saveHands, saveSessions, updateOpponentObservation } from './storage.js';
 import { exportAll, importAll } from './exporter.js';
+import { renderHistoryPage } from './ui/historyList.js';
+import { renderReviewCard } from './ui/reviewCard.js';
 
 document.getElementById('app').innerHTML = `
   <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="session-bar"></span></header>
@@ -27,10 +29,16 @@ document.getElementById('app').innerHTML = `
   <nav id="tabbar"></nav>`;
 // GTO 图页：每次切入重渲，跟随当前 state（用户点选场景后以所选为准）
 let gtoScenario = null;
+let historyFilter = 'all'; // 历史页当前筛选（跨重渲保持）
 let importBtnTimer = null; // 导入按钮反馈还原 timer（防连点竞争）
 function switchPage(id) {
   baseSwitchPage(id);
   if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
+  if (id === 'history') renderHistoryPage(document.getElementById('page-history'), {
+    filter: historyFilter,
+    onFilter: f => { historyFilter = f; switchPage('history'); },
+    onOpenHand: h => openReviewDialog(h),
+  });
   if (id === 'settings') renderSettingsPage(document.getElementById('page-settings'), {
     onExport() {
       const json = exportAll();
@@ -57,7 +65,14 @@ function switchPage(id) {
         importBtnTimer = setTimeout(() => { btn.textContent = '导入 JSON'; }, 2000);
       }
     },
-    onClear() { /* TODO: Task 24 清空接线（含确认流程） */ },
+    onClear() {
+      // Task 24 接线：清空历史（会话+手数），对手档案保留
+      if (!confirm('确定清空所有历史记录与回合？对手档案保留')) return;
+      saveHands([]);
+      saveSessions([]);
+      switchPage('history');
+      switchPage('settings');
+    },
   });
 }
 renderTabbar(document.getElementById('tabbar'), switchPage);
@@ -150,6 +165,24 @@ export function refresh() {
 
 // 订阅不做页面重绘——重绘一律由交互显式调 refresh()，防止 setPatch→render→setPatch 死循环
 // subscribe(() => {});
+
+/** 复盘卡弹层：<dialog> 承载 renderReviewCard，关闭即销毁（写法同 openOpponentDrawer） */
+function openReviewDialog(record) {
+  document.getElementById('review-dlg')?.remove();
+  const dlg = document.createElement('dialog');
+  dlg.id = 'review-dlg';
+  const inner = document.createElement('div');
+  inner.style.cssText = 'min-width:280px;max-width:92vw;max-height:80vh;overflow:auto;background:var(--bg);color:var(--text);';
+  dlg.appendChild(inner);
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '关闭';
+  closeBtn.style.cssText = 'margin-top:8px;';
+  closeBtn.addEventListener('click', () => { try { dlg.close?.(); } catch { /* ignore */ } dlg.remove(); });
+  renderReviewCard(inner, record);
+  inner.appendChild(closeBtn);
+  document.body.appendChild(dlg);
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+}
 
 /** 对手编辑抽屉：<dialog> 名称 + 4类型快选 + 松紧/凶弱双滑条 + 删除/保存 */
 export function openOpponentDrawer(o) {
