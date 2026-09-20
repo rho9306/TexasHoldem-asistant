@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:wasm": "em++ -O3 --std=c++17 --bind -s MODULARIZE=1 -s EXPORT_NAME=createPokerCore -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web core/card.cpp core/deck.cpp core/evaluator.cpp wasm/bindings.cpp -o src/wasm/poker_core.js",
+    "test:engine": "em++ -O1 --std=c++17 -s ENVIRONMENT=node -s EXIT_RUNTIME=1 tests/engine_test.cpp core/card.cpp core/deck.cpp core/evaluator.cpp core/range.cpp core/equity_v2.cpp -o .engine-test/engine_test.js && node .engine-test/engine_test.js"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",

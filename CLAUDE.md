@@ -86,8 +86,6 @@ Texas/
 - [x] **v4.0 设计文档写入并自审通过**（13章节，见 §七 索引）
 - [x] 本交接文档同步更新（决策6-15、待办、要点）
 
-- [x] 2026-09-20 Task 2: Vite+Vitest 工程骨架跑通（texas-web/）
-
 > ⏭️ **下一步：** 见 §五「阶段A+」——用户审阅 v4.0 设计文档后，调用 writing-plans 技能产出实施计划
 
 ### 第三轮：设计审阅 + 实施计划（2026-09-20，全部完成）
@@ -95,6 +93,8 @@ Texas/
 - [x] 用户审阅通过 v4.0 设计文档（"通过，开始写实施计划"）
 - [x] 实施计划产出并自审：`docs/superpowers/plans/2026-09-20-poker-web-app-implementation.md`（27任务/6阶段，含 GTO 网格数据、接口签名表、引擎基准、部署工作流）
 - [x] 本交接文档同步更新（阶段A+勾选、当前阶段改写）
+- [x] 2026-09-20 Task 2: Vite+Vitest 工程骨架跑通（texas-web/）
+- [x] 2026-09-20 Task 3: Emscripten 工具链安装（C:\emsdk）+ WASM 构建管线 ping 跑通
 
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 
