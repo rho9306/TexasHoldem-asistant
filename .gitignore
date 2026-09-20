@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.omc/
+.superpowers/
+.engine-test/
+poker_assist/CMakeFiles/
+poker_assist/CMakeCache.txt
+poker_assist/build.ninja
+poker_assist/.ninja_*
+poker_assist/cmake_install.cmake
+poker_assist/*.exe
+poker_assist/*.obj
+.sdd/
