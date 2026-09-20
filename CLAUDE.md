@@ -98,6 +98,7 @@ Texas/
 - [x] 2026-09-20 Task 4: HandRange 169格静态模型（类索引/类名/组合数）+ 引擎测试框架（TDD）
 - [x] 2026-09-20 Task 5: 范围加权采样（占用避让+重采样兜底）+ liveCombos（TDD）
 - [x] 2026-09-20 Task 6: calculateEquityV2 范围化蒙特卡洛+范围透视+embind，6项基准全过
+- [x] 2026-09-20 Task 7: evaluateDecision 风格参数化决策 + WASM loader 容错（TDD）
 
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 
@@ -135,6 +136,7 @@ Texas/
 ## 六、关键技术要点（接手AI必读）
 
 1. **核心算法可完全复用：** `poker_assist/core/` 是平台无关的C++17代码（蒙特卡洛模拟、EV计算、牌力评估）。网页版通过 **Emscripten 编译为 WebAssembly** 复用，无需重写数学逻辑；v4.0 仅新增 `range.h/cpp`（13×13范围加权采样），evaluator/card/deck 不动。
+1a. **texas-web/core/evaluator.cpp 已修复4处存量数学缺陷并与 poker_assist 原版分叉**（2026-09-20 Task 6：三条误判葫芦/顺子提前截断/无踢脚编码伪平局/rankCounts 索引偏移；另 Deck(seed) 构造不洗牌，调用点须显式 deck.shuffle()）。设计§3.1"evaluator 不动"以修复后的 texas-web 版为准；原版是否回修待用户决定。
 2. **分工原则（v4.0）：** 数学运算在 WASM（快），策略规则在 JS 策略层 `src/strategy/`（纯函数、好改好测）。策略层只做查表与简单公式，无重计算。
 3. **GTO 数据合规：** 图表为手工整理的公开求解器共识简化范围（约16张、合计<10KB内嵌），不含商业产品数据；产品定位保持"学习/训练工具"+理性游戏提示，不承诺盈利。
 4. **硬件方案已彻底删除**（2026-09-20）：ESP32代码文件夹、2个BOM采购清单、旧设计文档中的硬件章节均已不存在。如未来重拾硬件方向需从头重建（放弃原因见§三决策表）。

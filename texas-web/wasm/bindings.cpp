@@ -36,4 +36,13 @@ EMSCRIPTEN_BINDINGS(poker_core) {
     .field("rangeStats", &EquityV2Result::rangeStats);
 
   function("calculateEquityV2", &calculateEquityV2Js);
+
+  value_object<DecisionResult>("DecisionResult")
+    .field("evCall", &DecisionResult::evCall)
+    .field("evRaise", &DecisionResult::evRaise)
+    .field("potOdds", &DecisionResult::potOdds)
+    .field("requiredEquity", &DecisionResult::requiredEquity)
+    .field("advice", &DecisionResult::advice)
+    .field("adviceLevel", &DecisionResult::adviceLevel);
+  function("evaluateDecision", &evaluateDecision);
 }

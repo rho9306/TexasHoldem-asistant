@@ -41,6 +41,8 @@ EquityV2Result calculateEquityV2(const std::vector<std::string>& heroHand,
     double beat = 0, tie = 0, lose = 0;              // 逐对手范围透视计数
     std::map<int, std::pair<int,int>> classWL;       // 类idx -> {样本数, 胜次数}（每对手合并）
 
+    int completed = 0;  // 成功迭代数：sample失败的迭代不计入分母
+
     std::vector<Card> fullBoard;
     for (int it = 0; it < iterations; it++) {
         bool iterUsed[52]; std::copy(used, used+52, iterUsed);
@@ -82,14 +84,16 @@ EquityV2Result calculateEquityV2(const std::vector<std::string>& heroHand,
         }
         if (!beaten && !tied) wins += 1;
         else if (!beaten && tied) ties += 1;
+        completed++;
     }
 
-    result.winRate = wins / iterations;
-    result.tieRate = ties / iterations;
+    if (completed <= 0) { result.simulations = 0; return result; }
+    result.winRate = wins / completed;
+    result.tieRate = ties / completed;
     result.lossRate = 1.0 - result.winRate - result.tieRate;
-    result.rangeStats.beatPct = beat / (iterations * nOpp) * 100;
-    result.rangeStats.tiePct  = tie / (iterations * nOpp) * 100;
-    result.rangeStats.losePct = lose / (iterations * nOpp) * 100;
+    result.rangeStats.beatPct = beat / ((double)completed * nOpp) * 100;
+    result.rangeStats.tiePct  = tie / ((double)completed * nOpp) * 100;
+    result.rangeStats.losePct = lose / ((double)completed * nOpp) * 100;
 
     // totalCombos：以初始占用（hero+board）计算每对手活组合之和的平均
     double live = 0;
@@ -105,5 +109,31 @@ EquityV2Result calculateEquityV2(const std::vector<std::string>& heroHand,
     std::sort(ranked.begin(), ranked.end());
     for (size_t i = 0; i < ranked.size() && i < 3; i++)
         result.rangeStats.dangerHands.push_back(HandRange::className(ranked[i].second));
+    result.simulations = completed;
     return result;
+}
+
+DecisionResult evaluateDecision(double winRate, double pot, double call,
+                                double raise, const std::string& adviceStyle) {
+    DecisionResult r;
+    r.potOdds = call <= 0 ? 0 : pot / call;
+    r.requiredEquity = 1.0 / (r.potOdds + 1.0);
+    r.evCall = winRate * pot - (1.0 - winRate) * call;
+    // 加注EV：50%跟注 / 30%弃牌 / 20%再加注弃权（设计§5.7已知局限，如实建模）
+    double foldEV = 0.3 * pot;
+    double callEV = 0.5 * (winRate * (pot + raise + call) - (1.0 - winRate) * raise);
+    r.evRaise = foldEV + callEV;
+
+    double diff = winRate - r.requiredEquity;
+    double bias = adviceStyle == "conservative" ? 0.02 : adviceStyle == "aggressive" ? -0.02 : 0.0;
+    diff += bias;
+
+    if (r.evRaise > r.evCall && r.evRaise > r.evCall * 1.3 && diff > 0.10) {
+        r.advice = diff > 0.15 ? "强烈加注" : "加注"; r.adviceLevel = "raise";
+    } else if (diff > 0.10) { r.advice = "强烈跟注"; r.adviceLevel = "call"; }
+    else if (diff > 0.02)  { r.advice = "略微跟注"; r.adviceLevel = "call"; }
+    else if (diff < -0.10) { r.advice = "强烈弃牌"; r.adviceLevel = "fold"; }
+    else if (diff < -0.02) { r.advice = "略微弃牌"; r.adviceLevel = "fold"; }
+    else { r.advice = "决策中性"; r.adviceLevel = "neutral"; }
+    return r;
 }

@@ -143,6 +143,37 @@ static void testEquityV2() {
     CHECK(sum > 99.0 && sum < 101.0);
     CHECK(r.lossRate > 0 && r.lossRate < 1);
   }
+  // 分母守恒：窄范围（只留2类）×多对手×500次——失败迭代不计入分母
+  {
+    std::vector<uint8_t> m(169, 0);
+    for (int i = 0; i < 169; i++) {
+      std::string n = HandRange::className(i);
+      if (n == "AA" || n == "KK") m[i] = 100;
+    }
+    std::vector<std::vector<uint8_t>> masks = {m, m, m};  // 3个同样窄范围对手
+    auto r = calculateEquityV2({"As","Ad"}, {}, masks, 500);
+    CHECK(std::abs(r.winRate + r.tieRate + r.lossRate - 1.0) < 1e-6);
+    double pct = r.rangeStats.beatPct + r.rangeStats.tiePct + r.rangeStats.losePct;
+    CHECK(std::abs(pct - 100.0) < 0.5);
+    CHECK(r.simulations <= 500 && r.simulations > 0);
+  }
 }
 
-int main(){ testRangeStatic(); testRangeSample(); testEquityV2(); printf(fails? "FAILED %d\n":"ALL PASS\n", fails); return fails?1:0; }
+static void testDecision() {
+  // brief修正：potOdds = pot/call = 100/25 = 4（brief原文"0.25/25-100"与其requiredEquity=1/5自相矛盾）
+  auto r = evaluateDecision(0.55, 100, 25, 75, "standard");
+  CHECK(std::abs(r.potOdds - 4.0) < 1e-9);
+  CHECK(std::abs(r.requiredEquity - 1.0/5.0) < 1e-9);
+  CHECK(std::abs(r.evCall - (0.55*100 - 0.45*25)) < 1e-9);
+  CHECK(r.evRaise > 0);
+  CHECK(r.adviceLevel == "raise" || r.adviceLevel == "call");
+  auto strong = evaluateDecision(0.85, 100, 25, 75, "standard");
+  CHECK(strong.adviceLevel == "raise");
+  auto weak = evaluateDecision(0.10, 100, 25, 75, "standard");
+  CHECK(weak.adviceLevel == "fold");
+  auto cons = evaluateDecision(0.48, 100, 40, 100, "conservative");
+  auto aggr = evaluateDecision(0.48, 100, 40, 100, "aggressive");
+  auto lvl = [](const DecisionResult& d){ return d.adviceLevel=="raise"?3 : d.adviceLevel=="call"?2 : d.adviceLevel=="neutral"?1 : 0; };
+  CHECK(lvl(aggr) >= lvl(cons));
+}
+int main(){ testRangeStatic(); testRangeSample(); testEquityV2(); testDecision(); printf(fails? "FAILED %d\n":"ALL PASS\n", fails); return fails?1:0; }
