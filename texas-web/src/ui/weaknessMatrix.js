@@ -1,5 +1,6 @@
 // 个人弱点矩阵：位置 × 对手类型 × 纹理 分组命中率（Task 24）
 // 样本 <20 手只显示计数不出结论（避免小样本误导）
+import { esc } from './dom.js';
 export function weaknessGroups(hands) {
   const map = new Map();
   for (const h of hands) {
@@ -25,7 +26,7 @@ export function renderWeaknessMatrix(container, hands) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;justify-content:space-between;border-top:1px solid var(--border);padding:4px 0;';
     const enough = g.count >= 20;
-    row.innerHTML = `<span>${g.position} × ${g.oppType} × ${g.textureLabel}</span>
+    row.innerHTML = `<span>${esc(g.position)} × ${esc(g.oppType)} × ${esc(g.textureLabel)}</span>
       <span class="num">${enough ? Math.round(g.hitRate * 100) + '% 命中' : ''} <span class="dim">（${g.count}手${enough ? '' : '，样本<20不出结论'}）</span></span>`;
     el.appendChild(row);
   }

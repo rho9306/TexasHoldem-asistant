@@ -1,6 +1,7 @@
 // 复盘卡：牌面重绘 + 当时建议 + 实际行动 + 可编辑标签/笔记（Task 24）
-// 安全约定：tags/notes/action 为用户可编辑字段（可经导入JSON注入），一律 DOM API 赋值，
-// 不做 innerHTML 插值（存储型XSS防护，PLAN-FIX）；常量部分可保留 innerHTML。
+// 安全约定：记录字段均可经导入JSON伪造，innerHTML 插值一律 esc 包裹；
+// tags/notes/action 为用户可编辑字段，用 DOM API 赋值（存储型XSS防护，PLAN-FIX）。
+import { esc } from './dom.js';
 import { renderMatrix } from './handMatrix.js';
 import { loadAll, saveHands } from '../storage.js';
 
@@ -21,10 +22,10 @@ export function renderReviewCard(container, record /* , opponents —— 保留�
   const el = document.createElement('div');
   el.className = 'card';
   // 常量结构用 innerHTML；equity/advice/gtoAction/tableProfile/street 等均为系统生成字段
-  el.innerHTML = `<div class="num" style="font-size:18px">${record.hand.join(' ')} + ${record.board.join(' ') || '（翻前）'}</div>
-    <div class="dim">${record.street} · ${record.preflopScenario?.heroPosition ?? '?'} · ${record.tableProfile ?? ''}</div>
-    <div>当时建议：<b>${record.advice ?? ''}</b>（胜率 ${((record.equity ?? 0) * 100).toFixed(1)}%）· GTO对照：${record.gtoAction ?? ''}</div>
-    <div>盈亏 <span class="num">${record.result?.net ?? 0}</span>
+  el.innerHTML = `<div class="num" style="font-size:18px">${esc(record.hand.join(' '))} + ${esc(record.board.join(' ') || '（翻前）')}</div>
+    <div class="dim">${esc(record.street)} · ${esc(record.preflopScenario?.heroPosition ?? '?')} · ${esc(record.tableProfile ?? '')}</div>
+    <div>当时建议：<b>${esc(record.advice ?? '')}</b>（胜率 ${((record.equity ?? 0) * 100).toFixed(1)}%）· GTO对照：${esc(record.gtoAction ?? '')}</div>
+    <div>盈亏 <span class="num">${esc(record.result?.net ?? 0)}</span>
       ${record.followedAdvice === false ? '<span style="color:var(--warn)">⚠偏离建议</span>' : ''}</div>
     <label>标签 <input id="rv-tags"/></label>
     <label>笔记 <input id="rv-notes"/></label>
@@ -39,19 +40,22 @@ export function renderReviewCard(container, record /* , opponents —— 保留�
 
   const save = document.createElement('button');
   save.textContent = '保存修改';
+  let saveTimer = null; // 连点保存：上一个还原 timer 先清掉，避免提前还原（同 main.js importBtnTimer 模式）
   save.addEventListener('click', () => {
     const { hands } = loadAll();
     const idx = hands.findIndex(h => h.id === record.id);
     if (idx >= 0) {
+      const net = Number(el.querySelector('#rv-net').value);
       hands[idx] = { ...hands[idx],
         action: el.querySelector('#rv-action').value,
-        result: { net: +el.querySelector('#rv-net').value },
+        result: { net: Number.isFinite(net) ? net : 0 }, // 输入清空得 NaN，存 0
         followedAdvice: el.querySelector('#rv-follow').checked,
         tags: el.querySelector('#rv-tags').value.split(',').map(s => s.trim()).filter(Boolean),
         notes: el.querySelector('#rv-notes').value };
       saveHands(hands);
       save.textContent = '✓ 已保存';
-      setTimeout(() => { save.textContent = '保存修改'; }, 1500);
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => { save.textContent = '保存修改'; }, 1500);
     }
   });
   el.appendChild(save);

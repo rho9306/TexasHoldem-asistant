@@ -2,7 +2,7 @@
 import { loadAll } from '../storage.js';
 import { cumulativeSeries, renderEvCurve } from './evCurve.js';
 import { renderWeaknessMatrix } from './weaknessMatrix.js';
-import { renderReviewCard } from './reviewCard.js';
+import { esc } from './dom.js';
 
 export const isDeviated = h => h.followedAdvice === false;
 export const isLoss = h => (h.result?.net ?? 0) < 0;
@@ -35,7 +35,7 @@ export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenH
     const det = document.createElement('details');
     det.className = 'card';
     const summary = document.createElement('summary');
-    summary.innerHTML = `<b></b> · ${s.date} · ${group.length}手`;
+    summary.innerHTML = `<b></b> · ${esc(s.date)} · ${group.length}手`;
     summary.querySelector('b').textContent = s.name; // 会话名为用户输入，textContent 防注入
     det.appendChild(summary);
     for (const h of group) {
