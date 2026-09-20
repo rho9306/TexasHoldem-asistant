@@ -8,7 +8,7 @@ import { cBetSuggestion, sprInfo } from './strategy/sizing.js';
 import { impliedOdds } from './strategy/implied.js';
 import { tableProfile, adjustAdvice } from './strategy/tableDynamics.js';
 import { percentile } from './strategy/rankTable.js';
-import { handClassFor, isShort, getPreflopChart } from './strategy/charts.js';
+import { handClassFor, getPreflopChart } from './strategy/charts.js';
 
 // 显示与短码判定统一用 10BB 口径（设计约定缺省盲注 5/10，effectiveStackBB = 筹码/大盲）
 const BIG_BLIND = 10;
@@ -103,7 +103,6 @@ export function buildStrategy() {
   const heroCls = state.hand.length === 2 ? handClassFor(state.hand) : null;
   const pct = heroCls ? percentile(heroCls) : null;
   const effBB = effStack / BIG_BLIND;   // bigBlind=10 约定
-  const short = isShort(effBB);
   const gto = getPreflopChart({
     position: state.heroPosition, raiserPosition: '',
     role: state.raisesBefore > 0 ? 'defend' : 'open',
@@ -117,5 +116,6 @@ export function buildStrategy() {
     spr, mdf, outs, implied, profile, adjust,
     percentileText: heroCls ? `${heroCls} 排名前 ${pct}/169` : null,
     gtoTitle: gto.title,
+    gtoKind: gto.kind,
   };
 }

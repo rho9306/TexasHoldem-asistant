@@ -76,6 +76,7 @@ describe('计算页装配（Task 19）', () => {
     expect(state.opponents[0].name).toBe('老王');
     expect(state.opponents[0].looseness).toBe(62);
     expect(state.opponents[0].aggression).toBe(75);
+    expect(state.opponents[0].type).toBe('LAG');
     expect(document.getElementById('opp-drawer')).toBeNull();
   });
 

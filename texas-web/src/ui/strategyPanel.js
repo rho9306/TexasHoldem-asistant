@@ -15,7 +15,7 @@ export function renderStrategyPanel(container, s, boardLen = 0) {
   if (s.outs && s.outs.outs > 0) cards.push(['听牌 outs ' + s.outs.outs + '（' + Math.round(outsToEquity(s.outs.outs, boardLen === 3 ? 2 : 1) * 100) + '%）', s.outs.draws.join(' · ')]);
   if (s.implied) cards.push(['隐含赔率：需胜率 ' + Math.round(s.implied.required * 100) + '%', '考虑后手回合对手预期投入 ' + s.implied.future]);
   if (s.percentileText) cards.push(['起手牌百分位', s.percentileText]);
-  if (s.gtoTitle) cards.push(['GTO 对照', s.gtoTitle]);
+  if (s.gtoTitle) cards.push(['GTO 对照' + (String(s.gtoKind ?? '').startsWith('nash') ? '（短码 Nash 模式）' : ''), s.gtoTitle]);
 
   for (const [title, body] of cards) {
     const el = document.createElement('div');

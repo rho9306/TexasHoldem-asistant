@@ -111,6 +111,7 @@ export function openOpponentDrawer(o) {
   const aggr = dlg.querySelector('#od-aggr');
   const looseV = dlg.querySelector('#od-loose-v');
   const aggrV = dlg.querySelector('#od-aggr-v');
+  let editType = o.type ?? 'TAG';
   nameInput.value = o.name ?? '';
   loose.value = o.looseness ?? 35;
   aggr.value = o.aggression ?? 60;
@@ -130,6 +131,7 @@ export function openOpponentDrawer(o) {
       aggr.value = TYPE_DEFAULTS[t].aggression;
       looseV.textContent = loose.value;
       aggrV.textContent = aggr.value;
+      editType = t;
     });
     typesBox.appendChild(b);
   }
@@ -140,14 +142,14 @@ export function openOpponentDrawer(o) {
     refresh();
   });
   dlg.querySelector('#od-save').addEventListener('click', () => {
-    const form = { name: nameInput.value.trim(), looseness: +loose.value, aggression: +aggr.value };
+    const form = { type: editType, name: nameInput.value.trim(), looseness: +loose.value, aggression: +aggr.value };
     setPatch({ opponents: state.opponents.map(x => x.id === o.id ? { ...x, ...form } : x) });
     close();
     refresh();
   });
   function close() { try { dlg.close?.(); } catch { /* ignore */ } dlg.remove(); }
 
-  if (typeof dlg.showModal === 'function') dlg.showModal();
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
 
 refresh();
