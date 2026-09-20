@@ -2,6 +2,13 @@
 import { state, setPatch } from './state.js';
 import { getCore } from './wasm/pokerCore.js';
 import { maskForOpponent } from './strategy/ranges.js';
+import { analyzeTexture } from './strategy/texture.js';
+import { mdfAlpha, detectOuts } from './strategy/mdf.js';
+import { cBetSuggestion, sprInfo } from './strategy/sizing.js';
+import { impliedOdds } from './strategy/implied.js';
+import { tableProfile, adjustAdvice } from './strategy/tableDynamics.js';
+import { percentile } from './strategy/rankTable.js';
+import { handClassFor, isShort, getPreflopChart } from './strategy/charts.js';
 
 // 显示与短码判定统一用 10BB 口径（设计约定缺省盲注 5/10，effectiveStackBB = 筹码/大盲）
 const BIG_BLIND = 10;
@@ -31,12 +38,21 @@ export async function recalc() {
       setPatch({ result: null });
       return;
     }
+    // 承接项(a)：输入合法性拦截——非法/跟注超有效筹码时不进引擎
+    if (!Number.isFinite(state.pot) || !Number.isFinite(state.call) || state.pot < 0 || state.call < 0) {
+      setPatch({ result: { error: '请输入合法的底池与跟注金额' } });
+      return;
+    }
+    if (state.call > Math.min(state.myStack, state.oppStack)) {
+      setPatch({ result: { error: '跟注不能超过有效筹码，请修正输入' } });
+      return;
+    }
     const core = await getCore();
 
     // 对手位置简化为 MP（设计§5.7 已声明第一版位置简化）
     const role = state.raisesBefore > 0 ? 'defend' : 'open';
     const masks = state.opponents.map(o =>
-      maskForOpponent(o, { position: 'MP', role, effectiveStackBB: 100 }).mask);
+      maskForOpponent(o, { position: 'MP', role, effectiveStackBB: effectiveStack() / BIG_BLIND }).mask);
 
     // embind：字符串/掩码数组需构造 embind 向量对象，用完 delete
     const handVec = new core.VectorString();
@@ -66,4 +82,40 @@ export async function recalc() {
     console.error('recalc failed:', e);
     setPatch({ result: { error: '加载计算引擎失败，请刷新' } });
   }
+}
+
+/**
+ * 策略组装：读 state + state.result → 策略卡片数据包（Task 19）
+ * 返回形状：{ texture, cBet, spr, mdf, outs, implied, profile, adjust, percentileText, gtoTitle }
+ */
+export function buildStrategy() {
+  const tex = state.board.length >= 3 ? analyzeTexture(state.board) : null;
+  const effStack = effectiveStack();
+  const spr = state.pot > 0 && Number.isFinite(state.pot) ? sprInfo(effStack, state.pot) : null;
+  const mdf = state.call > 0 && Number.isFinite(state.call) ? mdfAlpha(state.call, state.pot) : null;
+  const outs = (state.board.length === 3 || state.board.length === 4) && state.hand.length === 2
+    ? detectOuts(state.hand, state.board) : null;
+  const oppType = state.opponents[0]?.type ?? 'TAG';
+  const implied = outs && outs.outs > 0 && Number.isFinite(state.call)
+    ? impliedOdds(state.call, state.pot, oppType) : null;
+  const profile = tableProfile(state.opponents);
+  // 手牌满2张才做百分位卡（handClassFor 需要2张）
+  const heroCls = state.hand.length === 2 ? handClassFor(state.hand) : null;
+  const pct = heroCls ? percentile(heroCls) : null;
+  const effBB = effStack / BIG_BLIND;   // bigBlind=10 约定
+  const short = isShort(effBB);
+  const gto = getPreflopChart({
+    position: state.heroPosition, raiserPosition: '',
+    role: state.raisesBefore > 0 ? 'defend' : 'open',
+    effectiveStackBB: effBB,
+  });
+  const isBluffish = state.result ? state.result.eff < 0.4 : false;
+  const adjust = adjustAdvice(state.result?.adviceLevel, isBluffish, profile, state.settings.autoTableAdaptation);
+  return {
+    texture: tex,
+    cBet: tex ? cBetSuggestion(tex.label, state.settings.adviceStyle) : null,
+    spr, mdf, outs, implied, profile, adjust,
+    percentileText: heroCls ? `${heroCls} 排名前 ${pct}/169` : null,
+    gtoTitle: gto.title,
+  };
 }

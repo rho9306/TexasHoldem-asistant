@@ -13,6 +13,7 @@ const TABLE = {
 };
 
 export function positionsFor(playerCount) {
+  playerCount = Math.round(playerCount);   // 承接项(c)：外部来源可能传小数
   return TABLE[Math.min(9, Math.max(2, playerCount))];
 }
 

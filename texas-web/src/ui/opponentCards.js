@@ -14,7 +14,7 @@ export function opponentDefaults(type) {
   };
 }
 
-const TYPE_LABEL = {
+export const TYPE_LABEL = {
   'TAG': '紧凶',
   'LAG': '松凶',
   'tight-passive': '紧弱',
@@ -40,7 +40,14 @@ export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPre
     const card = document.createElement('button');
     card.style.cssText = 'min-width:120px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);padding:8px;text-align:left;';
     const vpipTxt = o.handsSeen >= 20 && o.vpipObs != null ? ` · VPIP ${o.vpipObs}%` : '';
-    card.innerHTML = `<b>${o.name || TYPE_LABEL[o.type] || o.type}</b><br><small>${TYPE_LABEL[o.type] ?? o.type}${vpipTxt}</small>`;
+    // 承接项(b)：名称为用户输入（抽屉命名后持久化），必须 textContent 构建，防存储型XSS
+    const nameEl = document.createElement('b');
+    nameEl.textContent = o.name || TYPE_LABEL[o.type] || o.type;
+    const subEl = document.createElement('small');
+    subEl.textContent = `${TYPE_LABEL[o.type] ?? o.type}${vpipTxt}`;
+    card.appendChild(nameEl);
+    card.appendChild(document.createElement('br'));
+    card.appendChild(subEl);
     card.addEventListener('click', () => onEdit(o));
     list.appendChild(card);
   }
