@@ -13,6 +13,7 @@ import { renderTableProfile } from './ui/tableProfile.js';
 import { TYPE_DEFAULTS } from './strategy/ranges.js';
 import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
+import { renderSettingsPage } from './ui/settingsPage.js';
 
 document.getElementById('app').innerHTML = `
   <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span></header>
@@ -26,6 +27,11 @@ let gtoScenario = null;
 function switchPage(id) {
   baseSwitchPage(id);
   if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
+  if (id === 'settings') renderSettingsPage(document.getElementById('page-settings'), {
+    onExport() { /* TODO: Task 23 导出接线 */ },
+    onImport() { /* TODO: Task 23 导入接线 */ },
+    onClear() { /* TODO: Task 22 清空接线 */ },
+  });
 }
 renderTabbar(document.getElementById('tabbar'), switchPage);
 switchPage('calc');
