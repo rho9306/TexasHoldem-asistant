@@ -11,7 +11,8 @@ import { renderResult } from './ui/resultPanel.js';
 import { renderStrategyPanel } from './ui/strategyPanel.js';
 import { renderTableProfile } from './ui/tableProfile.js';
 import { TYPE_DEFAULTS } from './strategy/ranges.js';
-import { renderTabbar, switchPage } from './ui/tabs.js';
+import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
+import { renderChartPage } from './ui/chartViewer.js';
 
 document.getElementById('app').innerHTML = `
   <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span></header>
@@ -20,6 +21,12 @@ document.getElementById('app').innerHTML = `
   <main id="page-history" class="page"></main>
   <main id="page-settings" class="page"></main>
   <nav id="tabbar"></nav>`;
+// GTO 图页：每次切入重渲，跟随当前 state（用户点选场景后以所选为准）
+let gtoScenario = null;
+function switchPage(id) {
+  baseSwitchPage(id);
+  if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
+}
 renderTabbar(document.getElementById('tabbar'), switchPage);
 switchPage('calc');
 
