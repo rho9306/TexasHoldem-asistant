@@ -95,6 +95,7 @@ Texas/
 - [x] 本交接文档同步更新（阶段A+勾选、当前阶段改写）
 - [x] 2026-09-20 Task 2: Vite+Vitest 工程骨架跑通（texas-web/）
 - [x] 2026-09-20 Task 3: Emscripten 工具链安装（C:\emsdk）+ WASM 构建管线 ping 跑通
+- [x] 2026-09-20 Task 4: HandRange 169格静态模型（类索引/类名/组合数）+ 引擎测试框架（TDD）
 
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 
