@@ -100,6 +100,7 @@ Texas/
 - [x] 2026-09-20 Task 6: calculateEquityV2 范围化蒙特卡洛+范围透视+embind，6项基准全过
 - [x] 2026-09-20 Task 7: evaluateDecision 风格参数化决策 + WASM loader 容错（TDD）
 - [x] 2026-09-20 Task 8: rankTable 169类引擎生成百分位表（vs均匀3000次/类）
+- [x] 2026-09-20 Task 9: GTO图表数据——13张常规表+3档Nash推弃+查询API（关键格+宽度测试）
 
 - [x] 2026-09-20 git仓库初始化（main + feature/web-v4 分支）+ .gitignore
 
