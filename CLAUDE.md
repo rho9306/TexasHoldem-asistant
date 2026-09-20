@@ -116,6 +116,7 @@ Texas/
 - [⏸️] 2026-09-20 Task 20: handMatrix 13×13复用组件 + chartViewer GTO图页 —— **代码已提交（79e6547）但尚未派审查者审查**（暂停点）
 - [x] 2026-09-21 Task 21: 设置页（精度/风格/桌子适配开关/数据占位/关于）—— settingsPage.js + main.js 按需渲染接线；导出/导入/清空为占位（Task 22/23 接线）。**阶段C完成**
 - [x] 2026-09-21 Task 22: 数据层存储—— storage.js 四键(localStorage)+1000手FIFO+newSession/buildHandRecord/updateOpponentObservation（滚动VPIP），ui/sessionBar.js 顶栏会话指示，main.js window.__recordHand 接线（含对手VPIP推断更新+会话handsCount/netResult/evTotal同步+按钮"已记录"反馈）
+- [x] 2026-09-21 Task 23: 导出/导入—— exporter.js exportAll/importAll（app/version校验，失败不写库），设置页接线：Blob下载 texas-backup-YYYYMMDD-HHmm.json、导入按钮✓/✗反馈+state刷新重渲、file input 修 catch+value重置（CARRY-FIX）；onClear 仍占位留待 Task 24
 
 > ⏸️ **暂停点：** Task 20 审查未做，Task 21-27 未开始。恢复指引见 §八。
 
@@ -143,7 +144,7 @@ Texas/
 | 10. 策略层JS（图表/纹理/尺寸/MDF/outs/隐含赔率/桌子动态） | Task 8-14 | ✅ 完成（8模块，35测试） |
 | 11. 手机四标签UI | Task 15-21 | ✅ Task 15-19 ✅；Task 20 代码已提交待审查；**Task 21 设置页 ✅（阶段C完成）** |
 | 11b. 电脑四栏工作台+F12双视口 | Task 25 | ⬜ 未开始 |
-| 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | Task 22 ✅（存储+记录本手）；Task 23-24 ⬜ |
+| 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | Task 22 ✅（存储+记录本手）；**Task 23 ✅（导出导入）**；Task 24 ⬜ |
 | 13. 部署上线+真机验收 | Task 26-27 | ⬜ 未开始（PWA基础在 Task 26；需用户提供 GitHub 账号） |
 
 ### 阶段C：远期可选
