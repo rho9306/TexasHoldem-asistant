@@ -16,6 +16,7 @@ import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
 import { buildHandRecord, loadAll, saveHands, saveSessions, updateOpponentObservation } from './storage.js';
+import { exportAll, importAll } from './exporter.js';
 
 document.getElementById('app').innerHTML = `
   <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="session-bar"></span></header>
@@ -30,9 +31,30 @@ function switchPage(id) {
   baseSwitchPage(id);
   if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
   if (id === 'settings') renderSettingsPage(document.getElementById('page-settings'), {
-    onExport() { /* TODO: Task 23 导出接线 */ },
-    onImport() { /* TODO: Task 23 导入接线 */ },
-    onClear() { /* TODO: Task 22 清空接线 */ },
+    onExport() {
+      const json = exportAll();
+      const ts = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const name = `texas-backup-${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}-${pad(ts.getHours())}${pad(ts.getMinutes())}.json`;
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      URL.revokeObjectURL(url);
+    },
+    onImport(text, readError) {
+      const r = readError ? { ok: false, error: '文件读取失败' } : importAll(text);
+      if (r.ok) {
+        const d = loadAll();
+        setPatch({ opponents: d.opponents, settings: d.settings ?? state.settings });
+      }
+      const btn = document.getElementById('s-import');
+      if (btn) {
+        btn.textContent = r.ok ? '✓ 导入成功' : `✗ ${r.error}`;
+        setTimeout(() => { btn.textContent = '导入 JSON'; }, 2000);
+      }
+      if (r.ok) switchPage('settings'); // 重渲使控件反映导入后的 settings
+    },
+    onClear() { /* TODO: Task 24 清空接线（含确认流程） */ },
   });
 }
 renderTabbar(document.getElementById('tabbar'), switchPage);

@@ -19,6 +19,11 @@ export function renderSettingsPage(container, { onExport, onImport, onClear }) {
   container.querySelector('#s-adapt').addEventListener('change', e => setPatch({ settings: { ...state.settings, autoTableAdaptation: e.target.checked } }));
   container.querySelector('#s-export').addEventListener('click', onExport);
   container.querySelector('#s-import').addEventListener('click', () => container.querySelector('#s-file').click());
-  container.querySelector('#s-file').addEventListener('change', e => e.target.files[0]?.text().then(onImport));
+  // 读完重置 value（同一文件可二次选择）；读取失败走 onImport(null, err) 失败反馈
+  container.querySelector('#s-file').addEventListener('change', e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    file?.text().then(onImport).catch(err => onImport(null, err));
+  });
   container.querySelector('#s-clear').addEventListener('click', onClear);
 }
