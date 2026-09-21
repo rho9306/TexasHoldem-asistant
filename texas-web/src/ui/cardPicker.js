@@ -8,11 +8,16 @@ const SUIT_KEYS = { '1': 's', '2': 'h', '3': 'd', '4': 'c' };
 let instances = [];
 let pendingRank = null, pendingSuit = null; // 半选状态：rank/suit 顺序不限，凑齐一张即提交
 
+/** 公共牌自动提交判定：一条街=3/4/5张，选满任意一条街的长度即提交（slots=2 手牌仍只在满2张时提交） */
+function shouldCommit(slots, len) {
+  return slots === 2 ? len === 2 : len === 3 || len === 4 || len === 5;
+}
+
 function pruneInstances() {
   instances = instances.filter(i => document.body.contains(i.wrap));
 }
 
-/** 把一张牌填入该实例（与点击同逻辑：互斥置灰、满 slots 提交 onPick） */
+/** 把一张牌填入该实例（与点击同逻辑：互斥置灰、按街长自动提交 onPick） */
 function pushCard(inst, card) {
   if (inst.picked.includes(card) || inst.picked.length >= inst.slots) return false;
   if (inst.used.includes(card)) return false;
@@ -20,8 +25,7 @@ function pushCard(inst, card) {
   const b = inst.wrap.querySelector(`[data-card="${card}"]`);
   if (b) b.disabled = true;
   inst.pickedEl.textContent = inst.picked.join(' ');
-  if (inst.syncUI) inst.syncUI(); // 键盘录入也刷新确认按钮可见性
-  if (inst.picked.length === inst.slots) inst.onPick([...inst.picked]);
+  if (shouldCommit(inst.slots, inst.picked.length)) inst.onPick([...inst.picked]);
   return true;
 }
 
@@ -51,7 +55,7 @@ export function handleKeyEntry(key) {
   return ok;
 }
 
-/** 部分确认：把每个 0<picked<slots 的选牌器立即提交（修复翻牌只选3张无法落库的缺口） */
+/** 部分确认：把每个 0<picked<slots 的选牌器立即提交（键盘快捷键 Enter 入口；点击路径已按街长自动提交） */
 export function confirmPartials() {
   pruneInstances();
   let any = false;
@@ -59,8 +63,7 @@ export function confirmPartials() {
     if (inst.picked.length > 0 && inst.picked.length < inst.slots) {
       const cards = [...inst.picked];
       inst.picked.length = 0;
-      if (inst.syncUI) inst.syncUI(); // confirmPartials 清空了 picked（同引用），同步确认按钮隐藏
-      inst.onPick(cards);
+      inst.onPick(cards); // main.js 的 onPick 会 setPatch+refresh 重建选牌器
       any = true;
     }
   }
@@ -74,7 +77,7 @@ export function resetPending() {
 }
 
 export function renderCardPicker(container, { slots, usedCards = [], initial = [], onPick, title = '' }) {
-  const picked = [...initial]; // 回显已提交的牌（只展示/置灰，不触发 onPick）
+  const picked = [...initial]; // 回显已提交的牌（只展示/置灰，不触发 onPick）；picked 从 initial 起算，逐街补填自然衔接（3→4→5）
   const wrap = document.createElement('div');
   wrap.innerHTML = `<div class="card"><div class="dim"><span class="title"></span> <span class="kbd-hint" style="color:var(--accent)"></span></div><div class="picked num"></div><div class="grid"></div></div>`;
   wrap.querySelector('.title').textContent = title;
@@ -94,14 +97,13 @@ export function renderCardPicker(container, { slots, usedCards = [], initial = [
     const occupied = usedCards.includes(card) && !committed; // 被其他区域占用 → 保持置灰不可点
     if (occupied || picked.includes(card)) b.style.opacity = 0.3;
     if (occupied) b.disabled = true;
-    // 点击 = 切换选中：未选→选（满 slots 提交 onPick）；已选→移除（若是已提交牌则立即提交缩减集合）
+    // 点击 = 切换选中：未选→选（达到街长 3/4/5 即自动提交）；已选→移除（若是已提交牌则立即提交缩减集合）
     b.addEventListener('click', () => {
       if (occupied) return;
       if (picked.includes(card)) {
         picked.splice(picked.indexOf(card), 1);
         b.style.opacity = picked.includes(card) ? 0.3 : '';
         pickedEl.textContent = picked.join(' ');
-        syncUI(); // 取消选中 → 刷新确认按钮可见性
         if (committed) onPick([...picked]); // 取消的是已提交牌 → 立即提交缩减后的集合
         return;
       }
@@ -109,37 +111,11 @@ export function renderCardPicker(container, { slots, usedCards = [], initial = [
       picked.push(card);
       b.style.opacity = 0.3;
       pickedEl.textContent = picked.join(' ');
-      syncUI(); // 新选中 → 刷新确认按钮可见性
-      if (picked.length === slots) onPick([...picked]);
+      if (shouldCommit(slots, picked.length)) onPick([...picked]); // 选满一条街 → 自动提交
     });
     grid.appendChild(b);
   }
-  // ---- 部分确认按钮（仅公共牌选牌器 slots=5）：手机用户选3/4张后可提交进系统 ----
-  // 手牌选牌器 slots=2 选满即自动提交，部分确认无意义，不加。
-  let confirmBtn = null, syncUI = null;
-  if (slots === 5) {
-    confirmBtn = document.createElement('button');
-    confirmBtn.type = 'button';
-    confirmBtn.textContent = `✓ 确认当前公共牌（${picked.length}张）`;
-    confirmBtn.style.display = 'none'; // 1 <= picked < slots 时才显示
-    confirmBtn.addEventListener('click', () => {
-      // 与 confirmPartials 单实例逻辑一致：快照→清空→刷新显示→提交
-      const cards = [...picked];
-      picked.length = 0;
-      pickedEl.textContent = '';
-      syncUI();
-      onPick(cards); // main.js 的 onPick 会 setPatch+refresh 重建选牌器
-    });
-    wrap.querySelector('.card').appendChild(confirmBtn);
-  }
-  // 同步按钮可见性与文案（所有改变 picked 的路径都要调用）
-  syncUI = () => {
-    if (!confirmBtn) return;
-    const show = picked.length >= 1 && picked.length < slots;
-    confirmBtn.style.display = show ? '' : 'none';
-    confirmBtn.textContent = `✓ 确认当前公共牌（${picked.length}张）`;
-  };
   container.appendChild(wrap);
   pruneInstances();
-  instances.push({ wrap, pickedEl, picked, slots, used: usedCards, onPick, hintEl: wrap.querySelector('.kbd-hint'), syncUI });
+  instances.push({ wrap, pickedEl, picked, slots, used: usedCards, onPick, hintEl: wrap.querySelector('.kbd-hint') });
 }

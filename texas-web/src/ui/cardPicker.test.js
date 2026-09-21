@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderCardPicker } from './cardPicker.js';
+import { renderCardPicker, handleKeyEntry } from './cardPicker.js';
 describe('cardPicker', () => {
   it('选满张数后回调，重复牌置灰', () => {
     document.body.innerHTML = '<div id="cp"></div>';
@@ -62,56 +62,44 @@ describe('cardPicker', () => {
     expect(picked).toEqual(['Kd']);   // 不受影响
   });
 
-  // ---- 确认按钮（仅 slots=5 公共牌选牌器）：手机用户选部分牌后可提交 ----
-  function findConfirmBtn() {
-    return [...document.querySelectorAll('#cp .card > button')].pop() || null;
-  }
-
-  it('slots=5 选3张 → 确认按钮可见，点击后 onPick 收到恰好那3张', () => {
+  // ---- 公共牌自动提交（一条街=3/4/5张，选满即提交，无确认按钮）----
+  it('slots=5 选3张 → onPick 立即收到3张（自动提交）', () => {
     document.body.innerHTML = '<div id="cp"></div>';
     let picked = null;
     renderCardPicker(document.getElementById('cp'), { slots: 5, onPick: c => (picked = c) });
     const btns = [...document.querySelectorAll('#cp button[data-card]')];
-    const confirmBtn = findConfirmBtn();
-    expect(confirmBtn).toBeTruthy();
-    expect(confirmBtn.style.display).toBe('none'); // 0张 → 隐藏
     btns.find(b => b.dataset.card === 'Ah').click();
+    expect(picked).toBeNull(); // 1张不提交
     btns.find(b => b.dataset.card === 'Kd').click();
+    expect(picked).toBeNull(); // 2张不提交
     btns.find(b => b.dataset.card === '7c').click();
-    expect(confirmBtn.style.display).toBe('');      // 3张 → 可见
-    expect(confirmBtn.textContent).toContain('3张');
-    confirmBtn.click();
-    expect(picked).toEqual(['Ah', 'Kd', '7c']);     // 恰好那3张
+    expect(picked).toEqual(['Ah', 'Kd', '7c']); // 满3张立即提交
   });
 
-  it('slots=2 手牌选牌器无确认按钮；slots=5 选满5张自动提交后按钮隐藏', () => {
+  it('逐街补填：initial=3 再选1张提交4张；重建(initial=4)再选1张提交5张', () => {
+    document.body.innerHTML = '<div id="cp"></div>';
+    const picks = [];
+    // 翻牌已提交3张 → 回显重建
+    renderCardPicker(document.getElementById('cp'), { slots: 5, initial: ['Ah', 'Kd', '7c'], onPick: c => picks.push(c) });
+    [...document.querySelectorAll('#cp button[data-card]')].find(b => b.dataset.card === '2h').click();
+    expect(picks).toEqual([['Ah', 'Kd', '7c', '2h']]); // 转牌：第4张立即提交
+    document.body.innerHTML = '<div id="cp"></div>';
+    renderCardPicker(document.getElementById('cp'), { slots: 5, initial: ['Ah', 'Kd', '7c', '2h'], onPick: c => picks.push(c) });
+    [...document.querySelectorAll('#cp button[data-card]')].find(b => b.dataset.card === '9s').click();
+    expect(picks[1]).toEqual(['Ah', 'Kd', '7c', '2h', '9s']); // 河牌：第5张立即提交
+  });
+
+  it('键盘录入同样按街长自动提交（slots=5 第3张即提交）；slots=2 手牌不受影响', () => {
     document.body.innerHTML = '<div id="cp"></div>';
     let hole = null, board = null;
     renderCardPicker(document.getElementById('cp'), { slots: 2, onPick: c => (hole = c) });
     renderCardPicker(document.getElementById('cp'), { slots: 5, onPick: c => (board = c) });
-    // 手牌选牌器（第一个）不应有确认按钮
-    expect(document.querySelectorAll('#cp .card')[0].querySelectorAll('.card > button').length).toBe(0);
-    const btns = [...document.querySelectorAll('#cp .card')[1].querySelectorAll('button[data-card]')]; // 公共牌实例
-    const confirmBtn = findConfirmBtn();
-    expect(confirmBtn.style.display).toBe('none');
-    for (const card of ['2h', '4c', '6d', '8s', 'Th']) btns.find(b => b.dataset.card === card).click();
-    expect(board).toEqual(['2h', '4c', '6d', '8s', 'Th']); // 选满自动提交，无需按钮
-    expect(confirmBtn.style.display).toBe('none');         // 此时按钮隐藏
-  });
-
-  it('取消选中到0张 → 确认按钮隐藏；再选可重新确认', () => {
-    document.body.innerHTML = '<div id="cp"></div>';
-    const picks = [];
-    renderCardPicker(document.getElementById('cp'), { slots: 5, onPick: c => picks.push(c) });
-    const ks = [...document.querySelectorAll('#cp button[data-card]')].find(b => b.dataset.card === 'Ks');
-    const confirmBtn = findConfirmBtn();
-    ks.click();
-    expect(confirmBtn.style.display).toBe('');
-    ks.click(); // 取消到0张
-    expect(confirmBtn.style.display).toBe('none');
-    ks.click(); // 再选 → 按钮回来，可重新确认
-    expect(confirmBtn.style.display).toBe('');
-    confirmBtn.click();
-    expect(picks).toEqual([['Ks']]);
+    // 手牌：Q♠ + K♠ → 满2张提交（键盘先落手牌选牌器；花色数字键只有1不与rank冲突，故全用黑桃）
+    handleKeyEntry('Q'); handleKeyEntry('1'); handleKeyEntry('K'); handleKeyEntry('1');
+    expect(hole).toEqual(['Qs', 'Ks']);
+    expect(board).toBeNull();
+    // 公共牌：5♠ 6♠ 7♠ → 第3张立即提交
+    handleKeyEntry('5'); handleKeyEntry('1'); handleKeyEntry('6'); handleKeyEntry('1'); handleKeyEntry('7'); handleKeyEntry('1');
+    expect(board).toEqual(['5s', '6s', '7s']);
   });
 });
