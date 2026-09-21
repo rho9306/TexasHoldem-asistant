@@ -73,6 +73,7 @@ Texas/
 - [x] 2026-09-20 与用户确认：转向网页版/PWA路线（0成本）
 - [x] 2026-09-20 与用户确认：删除2个BOM文档+poker_assist_esp32文件夹
 - [x] 2026-09-20 创建本交接文档
+- [x] 2026-09-21 回修：poker_assist 原版 evaluator 的4处数学缺陷已从 texas-web 移植修复（三条误判葫芦/顺子提前截断/无踢脚编码伪平局/rankCounts 索引偏移），临时验证程序7项断言全过后删除
 - [x] 2026-09-20 启动UI可视化对比服务器（浏览器可视化选型，用户已在浏览器中确认风格B和布局方案2）
 - [x] 2026-09-20 手机端3页面蓝图 + 电脑端三栏工作台蓝图已生成，用户确认整体设计（"可以的，你先设计吧"）
 - [x] 2026-09-20 **执行删除**：`poker_assist_esp32/` 文件夹 + 2个BOM文档 + 旧版设计文档
@@ -210,8 +211,8 @@ Texas/
 
 | # | 问题 | 背景 |
 |---|------|------|
-| 1 | **poker_assist 原版 evaluator 的4处数学缺陷是否回修？** | Task 6 发现原版"三条误判葫芦/顺子提前截断/无踢脚编码伪平局/rankCounts 索引偏移"，texas-web 副本已修复并经验证；原版（Windows控制台版）仍带病运行。回修=改 poker_assist/core/evaluator.cpp 同4处 |
-| 2 | **poker_assist/debug_test*.cpp（8个未跟踪调试文件）去留？** | 历史调试遗留，一直未纳入 git。可删除、或移入 docs/ 归档、或加入 .gitignore |
+| ~~1~~ | ~~poker_assist 原版 evaluator 的4处数学缺陷是否回修？~~ | ✅ 已决策回修并执行完成（2026-09-21：4处修复已从 texas-web 移植回 poker_assist/core/evaluator.cpp，验证程序全过、调试文件已删） |
+| ~~2~~ | ~~poker_assist/debug_test*.cpp（8个未跟踪调试文件）去留？~~ | ✅ 已解决：文件已不在工作区 |
 | 3 | **部署目标账号**（Task 27 需要） | GitHub Pages 需要用户提供 GitHub 账号并建空仓库；或改用 Cloudflare Pages |
 
 ### 8.3 已挂起的 Minor 项（不影响功能，最终全分支审查时统一裁量）
