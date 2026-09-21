@@ -71,13 +71,14 @@ export function resetPending() {
   updateHints();
 }
 
-export function renderCardPicker(container, { slots, usedCards = [], onPick, title = '' }) {
-  const picked = [];
+export function renderCardPicker(container, { slots, usedCards = [], initial = [], onPick, title = '' }) {
+  const picked = [...initial]; // 回显已提交的牌（只展示/置灰，不触发 onPick）
   const wrap = document.createElement('div');
   wrap.innerHTML = `<div class="card"><div class="dim"><span class="title"></span> <span class="kbd-hint" style="color:var(--accent)"></span></div><div class="picked num"></div><div class="grid"></div></div>`;
   wrap.querySelector('.title').textContent = title;
   const grid = wrap.querySelector('.grid');
   const pickedEl = wrap.querySelector('.picked');
+  pickedEl.textContent = picked.join(' ');
   grid.style.display = 'grid';
   grid.style.gridTemplateColumns = 'repeat(13, 1fr)';
   grid.style.gap = '4px';
@@ -87,7 +88,7 @@ export function renderCardPicker(container, { slots, usedCards = [], onPick, tit
     b.dataset.card = card;
     b.innerHTML = `${r}<br>${sym}`;
     b.style.minWidth = '30px';
-    if (usedCards.includes(card)) { b.disabled = true; b.style.opacity = 0.3; }
+    if (usedCards.includes(card) || picked.includes(card)) { b.disabled = true; b.style.opacity = 0.3; }
     b.addEventListener('click', () => {
       if (picked.includes(card) || picked.length >= slots) return;
       picked.push(card);

@@ -1,3 +1,5 @@
+import { state } from '../state.js';
+
 export function renderPotForm(container, onChange) {
   container.innerHTML = '';
   const fields = [
@@ -9,7 +11,7 @@ export function renderPotForm(container, onChange) {
     const row = document.createElement('label');
     row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;';
     row.innerHTML = `<span>${label}</span><input name="${name}" type="number" inputmode="decimal"
-      style="width:110px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;" />`;
+      style="width:110px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;" value="${state[name] ?? ''}" />`;
     wrap.appendChild(row);
   }
   container.appendChild(wrap);
@@ -18,10 +20,11 @@ export function renderPotForm(container, onChange) {
     for (const [name] of fields) {
       const el = wrap.querySelector(`input[name=${name}]`);
       const n = parseFloat(el.value);
-      const ok = !isNaN(n) && n >= 0;
+      const ok = Number.isFinite(n) && n >= 0;
       el.classList.toggle('invalid', !ok);
       el.style.borderColor = ok ? 'var(--border)' : 'var(--danger)';
-      v[name] = ok ? n : NaN;
+      // 非法输入不写 NaN 进 state（保留原值），避免一次击键污染全部字段
+      v[name] = ok ? n : state[name];
     }
     onChange(v);
   };

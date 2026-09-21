@@ -1,4 +1,5 @@
 import { state, setPatch } from '../state.js';
+import { saveSettings } from '../storage.js';
 export function renderSettingsPage(container, { onExport, onImport, onClear }) {
   container.innerHTML = '';
   const mk = (title, inner) => { const d = document.createElement('div'); d.className = 'card';
@@ -14,9 +15,9 @@ export function renderSettingsPage(container, { onExport, onImport, onClear }) {
       <input type="file" id="s-file" accept=".json" style="display:none"/> <button id="s-clear" class="btn-danger">清空历史</button>`);
   mk('关于', `<p class="dim">德扑助手 v4.0 — 面向学习与训练的工具，帮助你理解胜率、EV、底池赔率与GTO概念。
       不承诺盈利。图表为公开共识简化版。请理性游戏。</p>`);
-  container.querySelector('#s-sim').addEventListener('change', e => setPatch({ settings: { ...state.settings, simulations: +e.target.value } }));
-  container.querySelector('#s-style').addEventListener('change', e => setPatch({ settings: { ...state.settings, adviceStyle: e.target.value } }));
-  container.querySelector('#s-adapt').addEventListener('change', e => setPatch({ settings: { ...state.settings, autoTableAdaptation: e.target.checked } }));
+  container.querySelector('#s-sim').addEventListener('change', e => { setPatch({ settings: { ...state.settings, simulations: +e.target.value } }); saveSettings(state.settings); });
+  container.querySelector('#s-style').addEventListener('change', e => { setPatch({ settings: { ...state.settings, adviceStyle: e.target.value } }); saveSettings(state.settings); });
+  container.querySelector('#s-adapt').addEventListener('change', e => { setPatch({ settings: { ...state.settings, autoTableAdaptation: e.target.checked } }); saveSettings(state.settings); });
   container.querySelector('#s-export').addEventListener('click', onExport);
   container.querySelector('#s-import').addEventListener('click', () => container.querySelector('#s-file').click());
   // 读完重置 value（同一文件可二次选择）；读取失败走 onImport(null, err) 失败反馈

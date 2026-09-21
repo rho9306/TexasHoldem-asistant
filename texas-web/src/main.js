@@ -16,7 +16,7 @@ import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
-import { buildHandRecord, loadAll, saveHands, saveSessions, updateOpponentObservation } from './storage.js';
+import { buildHandRecord, loadAll, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
 import { exportAll, importAll } from './exporter.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
@@ -86,6 +86,7 @@ function switchPage(id) {
       if (r.ok) {
         const d = loadAll();
         setPatch({ opponents: d.opponents, settings: d.settings ?? state.settings });
+        refresh(); // 计算页/桌面信息条按导入后数据重建（须在 switchPage 之前，桌面模式 refresh 会清空 page-settings）
       }
       if (r.ok) switchPage('settings'); // 先重渲使控件反映导入后的 settings
       // 反馈写在重渲后的新 DOM 上，避免被立即重建冲掉；timer 防连点竞争
@@ -151,12 +152,12 @@ function buildCalc(pageRoot, inputRoot, resultRoot, strategyRoot, split) {
   // 2/3. 手牌/公共牌选择器（已选牌互斥置灰）
   const used = [...state.hand, ...state.board];
   renderCardPicker(add('div'), {
-    slots: 2, usedCards: used.filter(c => !state.hand.includes(c)),
+    slots: 2, usedCards: used, initial: [...state.hand],
     title: '我的手牌',
     onPick: cards => { setPatch({ hand: cards }); refresh(); },
   });
   renderCardPicker(add('div'), {
-    slots: 5, usedCards: used.filter(c => !state.board.includes(c)),
+    slots: 5, usedCards: used, initial: [...state.board],
     title: '公共牌（3/4/5张随街填写，翻前可不填）',
     onPick: cards => { setPatch({ board: cards }); refresh(); },
   });
@@ -165,15 +166,16 @@ function buildCalc(pageRoot, inputRoot, resultRoot, strategyRoot, split) {
   // 5. 对手卡
   renderOpponentCards(add('div'), {
     opponents: state.opponents,
-    onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults('TAG')] }); refresh(); },
+    onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults('TAG')] }); saveOpponents(state.opponents); refresh(); },
     onPreset: () => {
       setPatch({ opponents: state.opponents.map(o => ({ ...o, type: 'TAG', looseness: TYPE_DEFAULTS.TAG.looseness, aggression: TYPE_DEFAULTS.TAG.aggression })) });
+      saveOpponents(state.opponents);
       refresh();
     },
     onEdit: o => openOpponentDrawer(o),
   });
   // 6. 底池表单
-  renderPotForm(add('div'), v => { setPatch(v); refresh(); });
+  renderPotForm(add('div'), v => { setPatch(v); updateResultsOnly(); }); // 只刷结果/策略区，输入区不重建（保焦点）
   // 7. 结果 + 8. 策略卡组（保留容器引用，recalc 完成后就地刷新，不整页重建）
   resultEl = split ? document.createElement('div') : add('div');
   renderResult(resultEl, state.result);
@@ -205,6 +207,15 @@ function renderCalc() {
   updateDesktopTopbar();
 }
 
+/** 只刷结果/策略区（底池表单击键专用：不重建计算页，输入框焦点/半输状态保持） */
+function updateResultsOnly() {
+  recalc().then(() => {
+    setPatch({ strategy: state.result?.error ? null : buildStrategy() });
+    renderResult(resultEl, state.result);
+    renderStrategyPanel(strategyEl, state.strategy, state.board.length);
+  }).catch(() => { /* recalc 内部已兜底 error result */ });
+}
+
 /** 交互入口：重绘计算页 → 引擎计算 → 策略组装 → 刷新结果/策略区（订阅不回调，避免死循环） */
 export function refresh() {
   renderCalc();
@@ -234,7 +245,7 @@ if (mq) {
 // ---- Task 25 键盘快捷键 ----
 window.__confirmCards = () => { confirmPartials(); }; // 刷新由 onPick→setPatch→refresh 驱动，此处不再补刀
 window.__clearCards = () => { resetPending(); setPatch({ hand: [], board: [] }); refresh(); };
-window.__recalc = () => refresh();
+window.__recalc = () => { if (!confirmPartials()) refresh(); }; // 有半选时先确认（onPick 已驱动刷新），无半选才重算
 
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.metaKey || e.altKey) return; // 修饰键组合（如 Ctrl+C 复制）不触发快捷键
@@ -319,12 +330,14 @@ export function openOpponentDrawer(o) {
 
   dlg.querySelector('#od-del').addEventListener('click', () => {
     setPatch({ opponents: state.opponents.filter(x => x.id !== o.id) });
+    saveOpponents(state.opponents);
     close();
     refresh();
   });
   dlg.querySelector('#od-save').addEventListener('click', () => {
     const form = { type: editType, name: nameInput.value.trim(), looseness: +loose.value, aggression: +aggr.value };
     setPatch({ opponents: state.opponents.map(x => x.id === o.id ? { ...x, ...form } : x) });
+    saveOpponents(state.opponents);
     close();
     refresh();
   });
@@ -333,4 +346,8 @@ export function openOpponentDrawer(o) {
   if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
 
+// 启动回填：localStorage 已存设置/对手 → 与默认值浅合并（防旧档缺新键），在首次 refresh 之前
+const saved = loadAll();
+if (saved.settings) setPatch({ settings: { ...state.settings, ...saved.settings } });
+if (saved.opponents?.length) setPatch({ opponents: saved.opponents });
 refresh();

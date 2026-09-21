@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents } from './storage.js';
+import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents, saveSettings } from './storage.js';
 
 describe('storage', () => {
   beforeEach(() => localStorage.clear());
@@ -25,6 +25,13 @@ describe('storage', () => {
     expect(opponents[0].vpipObs).toBe(67);
     updateOpponentObservation('o1', false); // → 2/4 = 50%
     expect(loadAll().opponents[0].vpipObs).toBe(50);
+  });
+  it('saveSettings+loadAll 往返（设置落盘）', () => {
+    saveSettings({ simulations: 5000, adviceStyle: 'aggressive', autoTableAdaptation: false });
+    const { settings } = loadAll();
+    expect(settings.simulations).toBe(5000);
+    expect(settings.adviceStyle).toBe('aggressive');
+    expect(settings.autoTableAdaptation).toBe(false);
   });
   it('loadAll 在存储为空时返回兜底值', () => {
     const all = loadAll();
