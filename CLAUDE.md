@@ -120,7 +120,10 @@ Texas/
 
 - [x] 2026-09-21 Task 24: 历史页—— historyList/evCurve/weaknessMatrix/reviewCard 四模块（筛选条split修复+用户字段XSS防护+无会话手归"未分组"），main.js 接 history 分支+复盘 dialog+onClear 清空（对手档案保留）；**阶段D完成**
 
-> ⏸️ **暂停点：** Task 20 审查未做，Task 25-27 未开始。恢复指引见 §八。
+
+- [x] 2026-09-21 Task 25: 电脑四栏工作台——≥1024px `#workspace` 四栏（1.1:1:1.2:0.9，1024-1279px 历史并底三栏）+ matchMedia 双模式整树重建（手机布局不变）+ 键盘快捷键（rank+花色数字录入/Enter 确认部分选择/C 清空/Space 重算，window.__confirmCards/__clearCards/__recalc）+ CARRY-FIX 三件（select/checkbox 44px、历史行按钮 44px、btn-danger 类）
+
+> ⏸️ **暂停点：** Task 20 审查未做，Task 26-27 未开始。恢复指引见 §八。
 
 ---
 
@@ -145,7 +148,7 @@ Texas/
 | 9. 引擎层 calculateEquityV2+基准 | Task 4-7 | ✅ 完成（6项基准+守恒+风格区分全过；⭐evaluator 4处缺陷修复，见§八决策1） |
 | 10. 策略层JS（图表/纹理/尺寸/MDF/outs/隐含赔率/桌子动态） | Task 8-14 | ✅ 完成（8模块，35测试） |
 | 11. 手机四标签UI | Task 15-21 | ✅ Task 15-19 ✅；Task 20 代码已提交待审查；**Task 21 设置页 ✅（阶段C完成）** |
-| 11b. 电脑四栏工作台+F12双视口 | Task 25 | ⬜ 未开始 |
+| 11b. 电脑四栏工作台+F12双视口 | Task 25 | ✅ 完成（F12 四视口手动走查分期至 Task 27 真机/浏览器验收） |
 | 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | Task 22 ✅（存储+记录本手）；Task 23 ✅（导出导入）；**Task 24 ✅（历史复盘，阶段D完成）** |
 | 13. 部署上线+真机验收 | Task 26-27 | ⬜ 未开始（PWA基础在 Task 26；需用户提供 GitHub 账号） |
 
