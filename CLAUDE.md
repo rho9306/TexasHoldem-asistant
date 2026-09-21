@@ -2,7 +2,7 @@
 
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
-**最后更新：** 2026-09-21（第五轮·**开发完成**：Task 20 补审 + Task 21-27 全部完成 + 最终全分支审查（修复2个跨接缝 Critical：potForm 焦点保持/settings与对手落盘回填）+ evaluator 回修。测试基线 **75 vitest + 6 引擎基准全绿**，`npm run build` 通过，已合并 main）
+**最后更新：** 2026-09-21（第五轮·**开发完成并上线**：Task 20 补审 + Task 21-27 全部完成 + 最终全分支审查（修复2个跨接缝 Critical）+ evaluator 回修 + GitHub Pages 部署成功。测试基线 **75 vitest + 6 引擎基准全绿**。**本轮全程详录见 §九**）
 **当前阶段：** 🎉 **已上线**：https://rho9306.github.io/TexasHoldem-asistant/ （2026-09-21 GitHub Pages 部署成功，index/sw.js/manifest 均 200）。剩余=真机验收（§8.2 清单，需用户手机/浏览器）+ 远期可选（§五阶段C）
 
 ---
@@ -230,3 +230,75 @@ Texas/
 - charts.js gridCell 异花查表未转置（Task 10 发现）；evaluateDecision 保守偏置方向反转（Task 7）；cardPicker 多实例 picked 串扰（Task 16）；对手抽屉类型快选不同步 type（Task 19）
 - **终审修复（2026-09-21）**：C1 potForm 击键重建丢焦点（跨接缝缺陷，单任务审查不可见）；C2 settings/opponents 落盘+回填缺失（VPIP观察链路断裂）；I1 导入后刷新；I2 选牌器回显已提交牌；I3 Space 先确认半选
 - 计划自身笔误共10+处（含 Task 24 筛选条字符串解构 bug、Task 22 VPIP `|0` 截断），均以"设计约定优先"修正并留痕于各任务报告
+
+---
+
+## 九、第五轮完整开发记录（2026-09-21，从暂停点到上线）
+
+> 本章为 2026-09-21 会话的全程详录：恢复交接 → Task 20 补审 → Task 21-27 逐任务"实现+独立审查" → 用户三决策执行 → opus 全分支终审 → 合并 main → 部署上线。所有任务简报/报告/审查包/逐任务 Minor 台账都在 `.git/sdd/`（progress.md 为进度台账）。
+
+### 9.1 会话概览
+
+- **起点：** 按 §八（原暂停清单）恢复：先补审 Task 20（79e6547，通过），再按 21→27 顺序执行
+- **工作模式：** subagent-driven-development——每任务派独立实现者子代理（简报由 `scripts/task-brief` 生成）→ `scripts/review-package` 生成差异包 → 独立审查者子代理审（规格+质量双裁定）→ 有 Important 以上发现则修复回环+复审
+- **模型策略：** 机械转录任务用 haiku，实现/审查用 sonnet，Task 25 审查与全分支终审用 opus
+- **结果：** 测试基线 61 → **75 vitest 全绿**（+引擎6基准），5 轮修复回环，全部 Minor 留档裁量，上线成功
+
+### 9.2 工作项时间线（提交全录）
+
+| # | 工作项 | 提交 | 审查结论 |
+|---|---|---|---|
+| 0 | Task 20 补审（handMatrix+GTO图页，代码为暂停前 79e6547） | — | ✅ Approved（.chip 44px ⚠️ 由控制器核实：全局 button 规则覆盖） |
+| 1 | Task 21 设置页 | 7f2e78a + docs 25de235 | ✅ Approved（file input 错误路径→承接 Task 23） |
+| 2 | Task 22 存储四键+FIFO+sessionBar+记录本手 | 08d3926 + docs 5fccd0a | ✅ Approved（VPIP `\|0`→Math.round 已修） |
+| 3 | Task 23 导出/导入+设置页接线 | 55864c6 + docs bef5ab2；**fix c663c99** | 第1轮：导入成功反馈被重渲冲掉（Important）→修复→✅ Approved |
+| 4 | Task 24 历史页四模块+复盘+清空历史 | e445e11 + docs 0f90155；**fix fdae865** | 第1轮：导入JSON残余XSS面（Important）→新建 ui/dom.js esc 全插值点覆盖→✅ Approved |
+| 5 | Task 25 桌面四栏工作台+键盘快捷键+CARRY-FIX三件 | 94623c8 + docs 69f4d01；**fix 69a97ad** | 第1轮（opus 审）：Ctrl+C 误清空+Enter双重refresh（Important）→修复→✅ Approved |
+| 6 | Task 26 PWA（manifest/sw.js/图标/index.html） | 048a10c + docs 774a5a0 | ✅ Approved（Minor 均为简报自带，真机验收时留意） |
+| 7 | 用户三决策执行 | 回修 821f30c + docs cb21109 | ✅ Approved（两版 evaluator.cpp 忽略行尾后逐行一致） |
+| 8 | 部署工作流+交接文档收尾 | dc2a892 | — |
+| 9 | **最终全分支审查**（opus，fbbf3fe..cb21109）+ 修复 | **fix d4727fe** | With fixes → 修复5项 → ✅ Approved, Ready to merge |
+| 10 | 合并 main（ff）、删 feature/web-v4、合并结果复验 75/75+build | — | — |
+| 11 | 部署（空提交 0089e0d 触发重跑）+ 上线记录 | f1061b1 | 线上 index/sw.js/manifest 均 200 |
+
+### 9.3 各任务关键实现决策（简报留白处的调度决定，接手 AI 必读）
+
+- **Task 22 记录本手：** sawVpip 场景推断=`call>0||raisesBefore>0||limpers>0`（多路底池无法逐人区分，粗粒度可接受）；记录时同步会话 handsCount/netResult/evTotal；无会话也记录（sessionId=''，历史页归"未分组"）；按钮 1.5s"✓ 已记录"反馈
+- **Task 23 接线：** 导出=Blob 下载 `texas-backup-YYYYMMDD-HHmm.json`；导入反馈=按钮文字（成功✓/失败✗，2s还原）；导入成功后 loadAll→setPatch+重渲设置页；CARRY-FIX：file input 补 .catch+value 重置
+- **Task 24：** PLAN-FIX——简报筛选条 `['all:全部',...].map(([k,t])=>...)` 字符串解构 bug 改 split(':')；onClear 语义=confirm 后清 texas.hands+texas.sessions，**对手档案保留**；复盘卡 notes/tags/action 用 DOM API 赋值（XSS 防护，后续终审扩展到全部动态字段）
+- **Task 25：** 快捷键钩子语义自定——rank 键+花色键(1-4)组合录牌（先手牌后公共牌，遵守 used/slots，用后即清）；`__confirmCards` 顺带修复 board slots=5 翻牌3张永不提交的存量缺口；`__clearCards`/`__recalc`=refresh；INPUT/SELECT/TEXTAREA/dialog 聚焦时忽略；renderCalc 参数化支持双模式（手机四标签不变）
+- **Task 26 PLAN-DEVIATION：** PWA 文件从简报的 texas-web/ 根改放 **public/**（vite 原样拷 dist 根，SW scope 正确，免 viteStaticCopy 依赖）；图标由 `scripts/gen-icons.mjs`（Node 内置 zlib 手写 PNG 编码器+参数化♠）生成，脚本与 PNG 一并入库
+- **evaluator 回修：** 只移4处数学逻辑（葫芦/顺子截断/踢脚编码/rankCounts），以 poker_assist 自身接口为准；验证=7项断言（K葫芦/wheel/6连张取高/踢脚分高下/3322两对）+ 两文件 diff 逐行一致；临时验证程序用后即删
+
+### 9.4 最终全分支审查（终审）发现与修复详情
+
+终审价值实证：以下 C1/C2 均为**单任务审查不可见的跨任务接缝缺陷**（各任务审查各看各的文件恰好漏掉）。
+
+- **C1 potForm 击键整树重建**：每个 input 事件→setPatch→refresh()→renderCalc() 整页重建，输入框清空失焦，多位数金额实际无法录入；且不预填 state、未填字段写 NaN。**修复**：potForm 从 state 预填4值+Number.isFinite 守卫（非法保留原值）；main.js 新增 updateResultsOnly()（只 recalc+刷结果/策略区，不重建输入区）
+- **C2 settings/opponents 两键从不落盘**：saveSettings/saveOpponents 仅有 exporter 与观察更新调用，设置页与对手抽屉只改 state，启动不回填→重启丢配置、VPIP 观察链路端到端断裂、导出为陈旧快照。**修复**：settingsPage 三处 change 落盘；main.js 对手全部变动点（onAdd/onPreset/抽屉保存/删除）落盘；启动 loadAll 回填（settings 与默认浅合并、opponents 非空才覆盖）
+- **I1** 导入备份后计算页不刷新→refresh（置于 switchPage 之前，防桌面模式抹掉设置页）；**I2** 选牌器不回显已提交牌→usedCards 传全集含自身+cardPicker 新增 initial 选项（初始化不触发 onPick）；**I3** Space 重算丢半选→`__recalc`=先 confirmPartials，无半选才 refresh
+- 补2条测试（potForm 预填/NaN 守卫、settings 落盘往返），基线 73→75
+- 终审对历史全部 Minor 逐条裁量：绝大多数留档（单线程/种子固定/不可达），T14 死import、T16 title innerHTML 两项已被后续任务自然解决
+
+### 9.5 部署实录与教训
+
+1. 无 gh CLI → 用户浏览器建仓 rho9306/TexasHoldem-asistant → 控制器 `git remote add` + `git push -u origin main`（GCM 授权一次通过）
+2. 首次 Actions 运行：**构建全绿**（npm ci/build/upload 皆过），仅 `deploy-pages` 步失败——Pages Source 当时未设 GitHub Actions
+3. 用户设置 Settings→Pages→Source=GitHub Actions 后，控制器推**空提交**触发重跑 → **success**
+4. 上线验证：`/`、`/sw.js`、`/manifest.webmanifest` 均 200，标题正确
+5. **教训：** Pages Source 必须先于首次部署设置；失败重跑用 `git commit --allow-empty && git push` 即可；github.io 国内访问偶发超时（推送也遇到一次，60s 退避重试成功）
+
+### 9.6 本轮新增的留档 Minor（全部不影响功能，详见 progress.md）
+
+- T21/T23：settingsPage 清空按钮红色内联样式（已改 .btn-danger 类，留档项已闭环）；importAll 中间态部分写入理论可能
+- T22：连点反馈时序竞争（clearTimeout 已修）；滚动 VPIP 舍入漂移（精确统计可改存 vpipCount，v4.1 备选）；action 固定'未记录'（复盘可改）
+- T24：复盘 dialog Esc 关闭不清理 DOM（与对手抽屉同模式，可统一 close 事件处理）；筛选/handHighlight 无单测
+- T25：pending 半选 Enter 不清（行为可辩）；花色分支无 return（纯风格）
+- 终审新增：potForm 清空时 UI 空红框但 state 保留旧值（可加 title 提示）；onImport settings 整体替换未浅合并（与启动回填口径不一致）；updateResultsOnly/refresh then 块重复可提取
+- T26：SW 离线首访、非导航404回退、display:fullscreen 体验、图标无 maskable——归 §8.2 真机验收观察项
+
+### 9.7 剩余事项
+
+1. **真机验收**（用户执行，清单 §8.2）——功能/性能/兼容/离线/合规五组
+2. 远期可选（§五阶段C）：PWA 增强、App Store 上架、对手观察深化、v4.1 改进项（见 9.6 各"备选"）
+3. 日常发布流程：改码→push main 自动上线；改 SW 手更 CACHE 版本号
