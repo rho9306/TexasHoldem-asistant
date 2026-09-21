@@ -101,8 +101,10 @@ function switchPage(id) {
       if (!confirm('确定清空所有历史记录与回合？对手档案保留')) return;
       saveHands([]);
       saveSessions([]);
-      switchPage('history');
-      switchPage('settings');
+      if (!desktop) { // 手机布局：按需重渲历史/设置页；桌面栏由下方 renderDesktopHistory 同步
+        switchPage('history');
+        switchPage('settings');
+      }
       if (desktop) renderDesktopHistory(); // 桌面栏常驻历史，同步刷新
     },
   });
@@ -230,13 +232,15 @@ if (mq) {
 }
 
 // ---- Task 25 键盘快捷键 ----
-window.__confirmCards = () => { if (confirmPartials()) refresh(); };
+window.__confirmCards = () => { confirmPartials(); }; // 刷新由 onPick→setPatch→refresh 驱动，此处不再补刀
 window.__clearCards = () => { resetPending(); setPatch({ hand: [], board: [] }); refresh(); };
 window.__recalc = () => refresh();
 
 document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return; // 修饰键组合（如 Ctrl+C 复制）不触发快捷键
+  if (e.repeat) return; // 长按不连发
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-  if (document.querySelector('dialog[open]')) return; // 弹层打开时不抢按键
+  if (document.querySelector('dialog[open]')) { resetPending(); return; } // 弹层打开时不抢按键，并清掉残留半选
   const RANK_CHARS = 'AKQJT98765432';
   if (RANK_CHARS.includes(e.key) || ['1', '2', '3', '4'].includes(e.key)) { e.preventDefault(); handleKeyEntry(e.key); return; }
   if (e.key === 'Enter') window.__confirmCards?.();
