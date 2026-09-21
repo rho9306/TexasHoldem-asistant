@@ -92,12 +92,17 @@ function commit(n) {
   saveOpponents(opponents);
 }
 
-/** 重渲所有仍挂在文档上的表格实例（脱离文档的旧容器顺带出清） */
-function rerenderAll() {
+/** 剪枝：出清已脱离文档的表格实例（防多次挂载累积死条目） */
+function pruneMounted() {
   for (let i = mounted.length - 1; i >= 0; i--) {
     if (!mounted[i].container.isConnected) { mounted.splice(i, 1); continue; }
-    mounted[i].render();
   }
+}
+
+/** 重渲所有仍挂在文档上的表格实例（脱离文档的旧容器顺带出清） */
+function rerenderAll() {
+  pruneMounted();
+  for (const m of mounted) m.render();
 }
 
 /**
@@ -123,6 +128,7 @@ export function nextRound() {
  *   onEditOpponent — 「编辑详情」回调（main.js 传 openOpponentDrawer，抽屉是 <dialog> 顶层弹出）
  */
 export function renderTableInto(container, handlers = {}) {
+  pruneMounted();
   container.innerHTML = '';
   const n0 = clampN();
   if (dealerSeat >= n0) dealerSeat = 0; // 人数缩小后庄家位越界兜底
