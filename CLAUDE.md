@@ -3,7 +3,7 @@
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
 **最后更新：** 2026-09-21（第五轮·**开发完成**：Task 20 补审 + Task 21-27 全部完成 + 最终全分支审查（修复2个跨接缝 Critical：potForm 焦点保持/settings与对手落盘回填）+ evaluator 回修。测试基线 **75 vitest + 6 引擎基准全绿**，`npm run build` 通过，已合并 main）
-**当前阶段：** 🚀 代码完成、终审通过、已合并 main。**剩余=部署上线（待用户配合）+ 部署后真机验收**，步骤见 §八
+**当前阶段：** 🎉 **已上线**：https://rho9306.github.io/TexasHoldem-asistant/ （2026-09-21 GitHub Pages 部署成功，index/sw.js/manifest 均 200）。剩余=真机验收（§8.2 清单，需用户手机/浏览器）+ 远期可选（§五阶段C）
 
 ---
 
@@ -157,7 +157,7 @@ Texas/
 | 11. 手机四标签UI | Task 15-21 | ✅ 完成（Task 20 于 2026-09-21 补审通过；阶段C完成） |
 | 11b. 电脑四栏工作台+F12双视口 | Task 25 | ✅ 完成（F12 四视口走查分期至 Task 27 真机/浏览器验收） |
 | 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | ✅ 完成（阶段D完成；settings/opponents 落盘+启动回填由终审 C2 修复补齐） |
-| 13. 部署上线+真机验收 | Task 26-27 | 代码✅（PWA+deploy.yml）；**部署动作待用户建 GitHub 仓库后推送（§八）**，真机验收随后 |
+| 13. 部署上线+真机验收 | Task 26-27 | ✅ **已部署**（2026-09-21，https://rho9306.github.io/TexasHoldem-asistant/ ）；真机验收清单见 §8.2（待用户执行） |
 
 ### 阶段C：远期可选
 12. ⬜ PWA增强（manifest、Service Worker离线缓存、添加到主屏幕引导）
@@ -193,18 +193,13 @@ Texas/
 
 ## 八、部署上线步骤（2026-09-21 起，需用户配合）
 
-### 8.1 部署步骤（GitHub Pages，用户已选定）
+### 8.1 部署（✅ 已完成 2026-09-21）
 
-1. **用户操作**：浏览器登录 GitHub → 右上角 + → New repository → 名称建议 `texas`（Public 免费，**不要**勾选任何初始化文件）→ Create
-2. **AI 操作**（拿到仓库名后）：
-   ```bash
-   cd /c/Users/36327/Desktop/Texas
-   git remote add origin https://github.com/<用户名>/texas.git
-   git push -u origin main        # 首次推送可能弹出浏览器登录（Git Credential Manager）
-   ```
-3. **用户操作**：GitHub 仓库页面 → Settings → Pages → Build and deployment → Source 选 **GitHub Actions**（只需设一次）
-4. Actions 自动跑 deploy.yml（push main 触发）→ 跑绿后访问 `https://<用户名>.github.io/texas/`
-5. 部署完成后把 URL 回填到本文档头部与 §五 表格
+- 仓库：https://github.com/rho9306/TexasHoldem-asistant （remote origin 已配置）
+- **线上地址：https://rho9306.github.io/TexasHoldem-asistant/**
+- 部署流水线：push main → Actions `deploy`（npm ci → build → Pages Artifact）→ 自动发布
+- 实际过程留痕：首次运行在 `deploy-pages` 步失败（Pages Source 当时未设 GitHub Actions；构建本身全绿）→ 用户设置 Source 后推空提交触发重跑 → 成功。**教训：Pages Source 必须先于首次部署设为 GitHub Actions；失败重跑用空提交 `git commit --allow-empty && git push` 即可**
+- 日常发布：改完代码 → `git push`（main）即自动上线；改 SW 后记得手更 `texas-web/public/sw.js` 的 CACHE 版本号
 
 ### 8.2 部署后真机验收清单（Task 27 Step 3，设计§13）
 
