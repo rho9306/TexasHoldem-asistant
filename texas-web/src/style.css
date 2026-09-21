@@ -59,6 +59,8 @@ select, input[type="checkbox"] { min-height: 44px; }
 .seat-menu button { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
 /* 320px 小屏：座位整体缩放防溢出（触控目标等比缩小，可接受） */
 @media (max-width: 359px) { .table-wrap { transform: scale(0.82); transform-origin: top center; margin-bottom: -50px; } }
+/* 内嵌牌桌（桌面中栏实时视图）：不写死高度，随容器宽度按椭圆桌比例自适应，与中栏 overflow-y 滚动共存 */
+.table-inline .table-wrap { max-width: none; height: auto; aspect-ratio: 560 / 340; margin: 12px auto; }
 
 /* ---- Batch B：桌面端顶栏 GTO图/设置 入口（仅 ≥1024px 可见）---- */
 #dt-gto, #dt-settings { display: none; }

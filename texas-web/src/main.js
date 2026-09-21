@@ -20,7 +20,7 @@ import { buildHandRecord, loadAll, saveHands, saveSessions, saveOpponents, saveS
 import { exportAll, importAll } from './exporter.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
-import { openTablePage, openFullScreen } from './ui/tablePage.js';
+import { openTablePage, openFullScreen, renderTableInto, nextRound } from './ui/tablePage.js';
 
 document.getElementById('app').innerHTML = `
   <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="desktop-topbar" class="dim num"></span> <button id="dt-gto">GTO图</button> <button id="dt-settings">设置</button> <span id="session-bar"></span></header>
@@ -190,22 +190,32 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   // ② 我的位置与翻前场景
   step(root, '② 我的位置与翻前场景');
   renderPositionBar(add(), patch => { setPatch(patch); refresh(); }, () => state);
-  // ③ 对手档案（标题行附「🪑 牌桌」入口：全屏牌桌视图编辑座次/庄家/对手类型）
+  // ③ 对手档案（标题行附按钮组：桌面 split 已有中栏内嵌表格则隐藏「🪑 牌桌」浮层入口，避免双入口；
+  // 「⏭ 下一轮」两模式都保留——不开浮层直接轮转庄位，位置条即时反映新位置）
   const step3Row = document.createElement('div');
-  step3Row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+  step3Row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;';
   const step3Title = document.createElement('div');
   step3Title.className = 'step-title';
   step3Title.style.margin = '10px 2px 4px 0';
   step3Title.textContent = '③ 对手档案';
+  const step3Btns = document.createElement('div');
+  step3Btns.style.cssText = 'display:flex;gap:6px;align-items:center;';
   const tableBtn = document.createElement('button');
   tableBtn.textContent = '🪑 牌桌';
-  tableBtn.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 14px;min-height:36px;';
+  tableBtn.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 14px;min-height:44px;';
   tableBtn.addEventListener('click', () => openTablePage({
     onEditOpponent: o => openOpponentDrawer(o), // 抽屉是 <dialog> 顶层弹出，不受浮层 z-index 影响
     onBack: () => refresh(), // 返回牌局：按牌桌页改动重绘计算页
   }));
+  if (split) tableBtn.style.display = 'none'; // 桌面模式：中栏已有内嵌表格，隐藏浮层入口
+  const nextRoundBtn = document.createElement('button');
+  nextRoundBtn.textContent = '⏭ 下一轮';
+  nextRoundBtn.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 14px;min-height:44px;';
+  nextRoundBtn.addEventListener('click', () => { nextRound(); refresh(); }); // nextRound 同步内嵌/浮层表格，refresh 刷位置条
+  step3Btns.appendChild(tableBtn);
+  step3Btns.appendChild(nextRoundBtn);
   step3Row.appendChild(step3Title);
-  step3Row.appendChild(tableBtn);
+  step3Row.appendChild(step3Btns);
   root.appendChild(step3Row);
   renderOpponentCards(add(), {
     opponents: state.opponents,
@@ -237,6 +247,14 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   strategyEl = document.createElement('div');
   out.appendChild(strategyEl);
   renderStrategyPanel(strategyEl, state.strategy, state.board.length);
+  // 🪑 牌桌实时视图（仅桌面 split）：内嵌到中栏策略卡之后，不开浮层；与手机浮层共享同一份庄位/轮次状态
+  if (split) {
+    step(out, '🪑 牌桌实时视图');
+    const tableEl = document.createElement('div');
+    tableEl.className = 'table-inline';
+    out.appendChild(tableEl);
+    renderTableInto(tableEl, { onEditOpponent: o => openOpponentDrawer(o) });
+  }
   // 记录本手（Task 22 接线 window.__recordHand）——保持在最后（桌面也在中栏策略之后，与手机顺序一致）
   const rec = document.createElement('button');
   rec.id = 'record-hand-btn';

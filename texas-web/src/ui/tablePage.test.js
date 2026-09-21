@@ -6,7 +6,7 @@ vi.hoisted(() => {
 });
 
 import { state, setPatch } from '../state.js';
-import { seatPositionName, heroOffset, openTablePage, openFullScreen } from './tablePage.js';
+import { seatPositionName, heroOffset, openTablePage, openFullScreen, renderTableInto, nextRound } from './tablePage.js';
 import { opponentDefaults } from './opponentCards.js';
 
 beforeEach(() => {
@@ -106,5 +106,60 @@ describe('牌桌页渲染冒烟', () => {
     openFullScreen('A', () => {});
     openFullScreen('B', () => {});
     expect(document.querySelectorAll('.fs-overlay').length).toBe(1);
+  });
+});
+
+// 注意：dealer/轮次为模块级会话内存，跨用例累积——本组断言一律基于「渲染读出的当前值」动态推算
+describe('renderTableInto 内嵌挂载 + nextRound 导出', () => {
+  /** 在 body 上挂一个内嵌表格，返回 { box, dealerAt, roundNow } */
+  function mount() {
+    const box = document.createElement('div');
+    document.body.appendChild(box);
+    renderTableInto(box, {});
+    const dealerAt = () => [...box.querySelectorAll('.table-seat')].findIndex(s => s.classList.contains('is-dealer'));
+    const roundNow = () => parseInt(box.querySelector('.table-bar .num').textContent.match(/第 (\d+) 轮/)[1], 10);
+    return { box, dealerAt, roundNow };
+  }
+
+  it('内嵌挂载冒烟：N 个座位 + 英雄座「我」 + 下一轮按钮 + 轮次标签', () => {
+    setPatch({ playerCount: 6, opponents: [], heroPosition: '' });
+    const { box, dealerAt } = mount();
+    expect(box.querySelectorAll('.table-seat').length).toBe(6);
+    expect(box.querySelector('.table-seat').textContent).toContain('我'); // 英雄固定座位 0
+    expect([...box.querySelectorAll('button')].some(b => b.textContent === '开始下一轮')).toBe(true);
+    expect(box.querySelector('.table-bar .num').textContent).toContain(`庄家座位 ${dealerAt() + 1}`);
+    box.remove(); // 出清 mounted 登记
+  });
+
+  it('nextRound()：庄家前进一位、heroPosition 重算、轮次 +1', () => {
+    setPatch({ playerCount: 6, opponents: [], heroPosition: '' });
+    const { box, dealerAt, roundNow } = mount();
+    const d0 = dealerAt(), r0 = roundNow();
+    nextRound();
+    expect(dealerAt()).toBe((d0 + 1) % 6);
+    expect(roundNow()).toBe(r0 + 1);
+    expect(state.heroPosition).toBe(seatPositionName(heroOffset((d0 + 1) % 6, 6), 6));
+    box.remove();
+  });
+
+  it('内嵌表格点「开始下一轮」与调用 nextRound() 等价', () => {
+    setPatch({ playerCount: 6, opponents: [], heroPosition: '' });
+    const { box, dealerAt, roundNow } = mount();
+    const d0 = dealerAt(), r0 = roundNow();
+    [...box.querySelectorAll('button')].find(b => b.textContent === '开始下一轮').click();
+    expect(dealerAt()).toBe((d0 + 1) % 6);   // 按钮与导出函数走同一份 dealer 状态
+    expect(roundNow()).toBe(r0 + 1);
+    expect(state.heroPosition).toBe(seatPositionName(heroOffset((d0 + 1) % 6, 6), 6));
+    box.remove();
+  });
+
+  it('多个已挂载视图共享 dealer 状态：nextRound 后全部同步', () => {
+    setPatch({ playerCount: 4, opponents: [], heroPosition: '' });
+    const a = mount(), b = mount();
+    const d0 = a.dealerAt();
+    nextRound();
+    expect(a.dealerAt()).toBe((d0 + 1) % 4);
+    expect(b.dealerAt()).toBe((d0 + 1) % 4); // 内嵌与浮层两实例同一步
+    a.box.remove(); b.box.remove();
   });
 });

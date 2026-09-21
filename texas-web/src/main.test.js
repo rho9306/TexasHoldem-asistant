@@ -96,3 +96,32 @@ describe('计算页装配（Task 19）', () => {
     expect(state.opponents.length).toBe(0);
   });
 });
+
+// 注意：happy-dom 的 window.matchMedia 对任意查询都返回 matches=true，
+// 因此 main.js 模块在此测试环境恒为桌面 split 模式（输入列=ws-input、中栏=ws-result）。
+// 手机分支的按钮布局逻辑与桌面共用同一段装配代码，仅「🪑 牌桌」显隐不同，两者一并断言。
+describe('计算页 ③对手档案标题行按钮 + 中栏内嵌牌桌', () => {
+  it('标题行含「🪑 牌桌」与「⏭ 下一轮」；桌面 split 下牌桌入口隐藏，中栏有内嵌表格', () => {
+    refresh();
+    const input = document.getElementById('ws-input');
+    const row = [...input.querySelectorAll('div')]
+      .find(d => [...d.querySelectorAll('button')].some(b => b.textContent === '⏭ 下一轮'));
+    expect(row).toBeTruthy();
+    const next = [...row.querySelectorAll('button')].find(b => b.textContent === '⏭ 下一轮');
+    expect(next.style.minHeight).toBe('44px'); // 触控目标约束
+    const tableBtn = [...row.querySelectorAll('button')].find(b => b.textContent === '🪑 牌桌');
+    expect(tableBtn.style.display).toBe('none'); // split 模式隐藏浮层入口（中栏已有内嵌视图）
+    // 中栏内嵌表格容器：座位数=playerCount，英雄座在位
+    const tableEl = document.getElementById('ws-result').querySelector('.table-inline');
+    expect(tableEl).not.toBeNull();
+    expect(tableEl.querySelectorAll('.table-seat').length).toBe(state.playerCount);
+  });
+
+  it('点「⏭ 下一轮」→ nextRound 轮转 + refresh 重绘（不抛错）', () => {
+    refresh();
+    const next = [...document.getElementById('ws-input').querySelectorAll('button')]
+      .find(b => b.textContent === '⏭ 下一轮');
+    expect(() => next.click()).not.toThrow();
+    expect(state.heroPosition).not.toBe(''); // 位置条数据已由 nextRound 落盘
+  });
+});
