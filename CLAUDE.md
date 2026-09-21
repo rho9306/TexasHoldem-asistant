@@ -186,6 +186,7 @@ Texas/
 | `docs/superpowers/specs/2026-08-23-poker-calculator-implementation.md` | 📦 历史参考 | Windows版实现计划（算法类设计细节仍可参考） |
 | `docs/superpowers/specs/poker_assist_ISSUES_SUMMARY.md` | 📦 历史参考 | Windows版调试记录（其中ESP32章节已过时，以本交接文档§三为准） |
 | `poker_assist/README.md` | ✅ 有效 | Windows版使用说明 |
+| `使用说明.md`（仓库根） | ✅ **当前主使用说明** | 面向使用者的网页版操作指南：安装/四标签功能/电脑快捷键/数据与备份/FAQ |
 | ~~`2026-08-23-poker-calculator-design.md`~~ | 🗑️ 已删除 | 旧版混合设计（含硬件章节），算法内容已并入设计文档 |
 | ~~`ESP32-Hardware-BOM-嘉立创.md` / `-完整版.md`~~ | 🗑️ 已删除 | 硬件采购清单，随硬件方案废弃 |
 
