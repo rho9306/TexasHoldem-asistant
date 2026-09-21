@@ -18,3 +18,20 @@ button, .tap { min-height: 44px; }                     /* 触控目标约束 */
 .page.active { display: block; }
 @media (min-width: 1024px) { #tabbar { display: none; } }   /* 电脑端在 Task 25 扩展 */
 .invalid { border-color: var(--danger) !important; }
+
+/* ---- Task 25: 桌面四栏工作台（≥1024px）---- */
+#desktop-topbar { display: none; }              /* 手机模式隐藏桌面信息条（桌面媒体查询内改 flex） */
+@media (min-width: 1024px) {
+  body { max-width: 1920px; margin: 0 auto; }
+  #workspace { display: grid; grid-template-columns: 1.1fr 1fr 1.2fr 0.9fr; gap: 8px; padding: 8px; }
+  #workspace > section { overflow-y: auto; max-height: calc(100vh - 56px); }
+  #desktop-topbar { display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  #workspace { grid-template-columns: 1.1fr 1fr 1.2fr; }
+  #ws-history { grid-column: 1 / -1; }          /* 历史横铺到底部 */
+}
+@media (max-width: 1023.9px) { #workspace { display: block; } }
+/* ---- Task 25 CARRY-FIX：触控目标与危险按钮 ---- */
+select, input[type="checkbox"] { min-height: 44px; }
+.btn-danger { color: var(--danger); }

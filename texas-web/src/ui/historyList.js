@@ -40,7 +40,7 @@ export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenH
     det.appendChild(summary);
     for (const h of group) {
       const item = document.createElement('button');
-      item.style.cssText = 'display:block;width:100%;text-align:left;background:var(--bg);border:none;border-top:1px solid var(--border);color:var(--text);padding:8px;';
+      item.style.cssText = 'display:block;width:100%;text-align:left;background:var(--bg);border:none;border-top:1px solid var(--border);color:var(--text);padding:8px;min-height:44px;';
       const net = h.result?.net ?? 0;
       // 手牌为系统生成的牌串，action 可能含用户输入——用 textContent 分段构建
       const handSpan = document.createElement('span');

@@ -1,9 +1,10 @@
-// 应用入口 + 计算页完整装配（Task 19）
-// 顺序：桌子画像横幅 → 手牌picker → 公共牌picker → 位置条 → 对手卡 → 底池表单 → 结果 → 策略卡组 → 记录按钮
+// 应用入口 + 计算页完整装配（Task 19）+ 桌面四栏工作台/键盘快捷键（Task 25）
+// 手机（<1024px）：四标签页布局不变。桌面（≥1024px）：#workspace 四栏 ①牌面+局面 ②结果 ③策略 ④历史。
+// matchMedia 变化时整树重建。快捷键：rank+花色数字录入、Enter 确认部分选择、C 清空、Space 重算。
 import './style.css';
 import { state, setPatch } from './state.js';
 import { recalc, buildStrategy, streetOf } from './calc.js';
-import { renderCardPicker } from './ui/cardPicker.js';
+import { renderCardPicker, handleKeyEntry, confirmPartials, resetPending } from './ui/cardPicker.js';
 import { renderPotForm } from './ui/potForm.js';
 import { renderPositionBar } from './ui/positionBar.js';
 import { renderOpponentCards, opponentDefaults, TYPE_LABEL } from './ui/opponentCards.js';
@@ -21,25 +22,55 @@ import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
 
 document.getElementById('app').innerHTML = `
-  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="session-bar"></span></header>
+  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="desktop-topbar" class="dim num"></span> <span id="session-bar"></span></header>
+  <div id="workspace">
+    <section id="ws-input"></section>
+    <section id="ws-result"></section>
+    <section id="ws-strategy"></section>
+    <section id="ws-history"></section>
+  </div>
   <main id="page-calc" class="page active"></main>
   <main id="page-gto" class="page"></main>
   <main id="page-history" class="page"></main>
   <main id="page-settings" class="page"></main>
   <nav id="tabbar"></nav>`;
+
+const $ = id => document.getElementById(id);
+const WS_IDS = ['ws-input', 'ws-result', 'ws-strategy', 'ws-history'];
+const PAGE_IDS = ['page-calc', 'page-gto', 'page-history', 'page-settings'];
+
 // GTO 图页：每次切入重渲，跟随当前 state（用户点选场景后以所选为准）
 let gtoScenario = null;
 let historyFilter = 'all'; // 历史页当前筛选（跨重渲保持）
 let importBtnTimer = null; // 导入按钮反馈还原 timer（防连点竞争）
+let currentPage = 'calc'; // 当前标签（跨模式切换恢复用）
+const mq = typeof window.matchMedia === 'function' ? window.matchMedia('(min-width: 1024px)') : null;
+let desktop = !!(mq && mq.matches);
+
+function renderDesktopHistory() {
+  renderHistoryPage($('ws-history'), {
+    filter: historyFilter,
+    onFilter: f => { historyFilter = f; renderDesktopHistory(); },
+    onOpenHand: h => openReviewDialog(h),
+  });
+}
+
+/** 桌面信息条：街 · 人数 · 对手数 · 画像 · 快捷键可用 */
+function updateDesktopTopbar() {
+  $('desktop-topbar').textContent = desktop
+    ? `${streetOf(state.board)} · ${state.playerCount}人桌 · ${state.opponents.length}对手 · 🎯画像 · 快捷键可用` : '';
+}
+
 function switchPage(id) {
+  currentPage = id;
   baseSwitchPage(id);
-  if (id === 'gto') renderChartPage(document.getElementById('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
-  if (id === 'history') renderHistoryPage(document.getElementById('page-history'), {
+  if (id === 'gto') renderChartPage($('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
+  if (id === 'history') renderHistoryPage($('page-history'), {
     filter: historyFilter,
     onFilter: f => { historyFilter = f; switchPage('history'); },
     onOpenHand: h => openReviewDialog(h),
   });
-  if (id === 'settings') renderSettingsPage(document.getElementById('page-settings'), {
+  if (id === 'settings') renderSettingsPage($('page-settings'), {
     onExport() {
       const json = exportAll();
       const ts = new Date();
@@ -58,7 +89,7 @@ function switchPage(id) {
       }
       if (r.ok) switchPage('settings'); // 先重渲使控件反映导入后的 settings
       // 反馈写在重渲后的新 DOM 上，避免被立即重建冲掉；timer 防连点竞争
-      const btn = document.getElementById('s-import');
+      const btn = $('s-import');
       if (btn) {
         clearTimeout(importBtnTimer);
         btn.textContent = r.ok ? '✓ 导入成功' : `✗ ${r.error}`;
@@ -72,12 +103,12 @@ function switchPage(id) {
       saveSessions([]);
       switchPage('history');
       switchPage('settings');
+      if (desktop) renderDesktopHistory(); // 桌面栏常驻历史，同步刷新
     },
   });
 }
-renderTabbar(document.getElementById('tabbar'), switchPage);
-renderSessionBar(document.getElementById('session-bar'));
-switchPage('calc');
+renderTabbar($('tabbar'), switchPage);
+renderSessionBar($('session-bar'));
 
 /** 记录本手：汇集 state → HandRecord 入库（FIFO），同步对手观察与会话计数，按钮短暂反馈"已记录" */
 window.__recordHand = () => {
@@ -96,18 +127,23 @@ window.__recordHand = () => {
     saveSessions(list);
   }
   // 按钮反馈：短暂变"已记录"后还原
-  const btn = document.getElementById('record-hand-btn');
+  const btn = $('record-hand-btn');
   if (btn) {
     btn.textContent = '✓ 已记录';
     setTimeout(() => { btn.textContent = '✓ 记录本手到历史'; }, 1500);
   }
+  if (desktop) renderDesktopHistory(); // 桌面栏常驻历史，同步刷新
 };
 
-const calcPage = document.getElementById('page-calc');
 let resultEl = null, strategyEl = null;
 
-function renderCalc() {
-  calcPage.innerHTML = '';
+/**
+ * 计算页装配（参数化目标容器）。split=false（手机）：9 块顺序写入 pageRoot。
+ * split=true（桌面）：1-6 块 + 记录按钮 → inputRoot，result/strategy 容器 → resultRoot/strategyRoot。
+ */
+function buildCalc(pageRoot, inputRoot, resultRoot, strategyRoot, split) {
+  const root = split ? inputRoot : pageRoot;
+  const add = tag => { const d = document.createElement(tag); root.appendChild(d); return d; };
   // 1. 桌子画像横幅
   renderTableProfile(add('div'), state.opponents, state.settings.autoTableAdaptation);
   // 2/3. 手牌/公共牌选择器（已选牌互斥置灰）
@@ -137,25 +173,40 @@ function renderCalc() {
   // 6. 底池表单
   renderPotForm(add('div'), v => { setPatch(v); refresh(); });
   // 7. 结果 + 8. 策略卡组（保留容器引用，recalc 完成后就地刷新，不整页重建）
-  resultEl = add('div');
+  resultEl = split ? document.createElement('div') : add('div');
   renderResult(resultEl, state.result);
-  strategyEl = add('div');
+  if (split) resultRoot.appendChild(resultEl);
+  strategyEl = split ? document.createElement('div') : add('div');
   renderStrategyPanel(strategyEl, state.strategy, state.board.length);
+  if (split) strategyRoot.appendChild(strategyEl);
   // 9. 记录本手（Task 22 接线 window.__recordHand）
   const rec = document.createElement('button');
   rec.id = 'record-hand-btn';
   rec.textContent = '✓ 记录本手到历史';
   rec.style.cssText = 'width:calc(100% - 16px);margin:8px;background:var(--accent);border:none;border-radius:10px;color:#000;font-weight:700;padding:12px;';
   rec.addEventListener('click', () => window.__recordHand?.());
-  calcPage.appendChild(rec);
+  root.appendChild(rec);
+}
 
-  function add(tag) { const d = document.createElement(tag); calcPage.appendChild(d); return d; }
+/** 按当前模式装配：手机 → page-calc；桌面 → ws-input/result/strategy + 常驻 ws-history */
+function renderCalc() {
+  if (desktop) {
+    for (const id of WS_IDS) $(id).innerHTML = '';
+    for (const id of PAGE_IDS) $(id).innerHTML = '';
+    buildCalc($('page-calc'), $('ws-input'), $('ws-result'), $('ws-strategy'), true);
+    renderDesktopHistory();
+  } else {
+    for (const id of WS_IDS) $(id).innerHTML = ''; // 手机模式工作台清空，避免重复内容
+    $('page-calc').innerHTML = '';
+    buildCalc($('page-calc'), null, null, null, false);
+  }
+  updateDesktopTopbar();
 }
 
 /** 交互入口：重绘计算页 → 引擎计算 → 策略组装 → 刷新结果/策略区（订阅不回调，避免死循环） */
 export function refresh() {
   renderCalc();
-  document.getElementById('street-badge').textContent = streetOf(state.board);
+  $('street-badge').textContent = streetOf(state.board);
   recalc().then(() => {
     setPatch({ strategy: state.result?.error ? null : buildStrategy() });
     renderResult(resultEl, state.result);
@@ -163,12 +214,39 @@ export function refresh() {
   }).catch(() => { /* recalc 内部已兜底 error result */ });
 }
 
-// 订阅不做页面重绘——重绘一律由交互显式调 refresh()，防止 setPatch→render→setPatch 死循环
-// subscribe(() => {});
+// ---- Task 25 桌面/手机双模式切换：matchMedia 变化时整树重建 ----
+function onModeChange(e) {
+  desktop = e.matches;
+  if (desktop) {
+    refresh(); // renderCalc 桌面分支含 ws-history 常驻渲染
+  } else {
+    refresh();
+    switchPage(currentPage); // 恢复手机标签页内容（gto/history/settings 按需重渲）
+  }
+}
+if (mq) {
+  if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onModeChange);
+  else if (typeof mq.addListener === 'function') mq.addListener(onModeChange); // 旧 Safari
+}
+
+// ---- Task 25 键盘快捷键 ----
+window.__confirmCards = () => { if (confirmPartials()) refresh(); };
+window.__clearCards = () => { resetPending(); setPatch({ hand: [], board: [] }); refresh(); };
+window.__recalc = () => refresh();
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  if (document.querySelector('dialog[open]')) return; // 弹层打开时不抢按键
+  const RANK_CHARS = 'AKQJT98765432';
+  if (RANK_CHARS.includes(e.key) || ['1', '2', '3', '4'].includes(e.key)) { e.preventDefault(); handleKeyEntry(e.key); return; }
+  if (e.key === 'Enter') window.__confirmCards?.();
+  if (e.key.toLowerCase() === 'c') window.__clearCards?.();
+  if (e.key === ' ') { e.preventDefault(); window.__recalc?.(); }
+});
 
 /** 复盘卡弹层：<dialog> 承载 renderReviewCard，关闭即销毁（写法同 openOpponentDrawer） */
 function openReviewDialog(record) {
-  document.getElementById('review-dlg')?.remove();
+  $('review-dlg')?.remove();
   const dlg = document.createElement('dialog');
   dlg.id = 'review-dlg';
   const inner = document.createElement('div');
@@ -186,7 +264,7 @@ function openReviewDialog(record) {
 
 /** 对手编辑抽屉：<dialog> 名称 + 4类型快选 + 松紧/凶弱双滑条 + 删除/保存 */
 export function openOpponentDrawer(o) {
-  document.getElementById('opp-drawer')?.remove();
+  $('opp-drawer')?.remove();
   const dlg = document.createElement('dialog');
   dlg.id = 'opp-drawer';
   dlg.innerHTML = `
