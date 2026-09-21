@@ -123,7 +123,9 @@ Texas/
 
 - [x] 2026-09-21 Task 25: 电脑四栏工作台——≥1024px `#workspace` 四栏（1.1:1:1.2:0.9，1024-1279px 历史并底三栏）+ matchMedia 双模式整树重建（手机布局不变）+ 键盘快捷键（rank+花色数字录入/Enter 确认部分选择/C 清空/Space 重算，window.__confirmCards/__clearCards/__recalc）+ CARRY-FIX 三件（select/checkbox 44px、历史行按钮 44px、btn-danger 类）
 
-> ⏸️ **暂停点：** Task 20 审查未做，Task 26-27 未开始。恢复指引见 §八。
+> ⏸️ **暂停点：** Task 20 审查未做，Task 27 未开始。恢复指引见 §八。
+
+- [x] 2026-09-21 Task 26: PWA基础——public/manifest.webmanifest + public/sw.js（缓存优先，CACHE 版本号手更触发旧缓存清理，构建产物 fetch 动态缓存兜底）+ index.html manifest 链接/SW 注册 + scripts/gen-icons.mjs 零依赖生成♠占位图标192/512（PLAN-DEVIATION：PWA文件由 texas-web/ 根改放 public/，Vite 原样拷入 dist 根，vite.config.js 无需改动）
 
 ---
 
@@ -150,7 +152,7 @@ Texas/
 | 11. 手机四标签UI | Task 15-21 | ✅ Task 15-19 ✅；Task 20 代码已提交待审查；**Task 21 设置页 ✅（阶段C完成）** |
 | 11b. 电脑四栏工作台+F12双视口 | Task 25 | ✅ 完成（F12 四视口手动走查分期至 Task 27 真机/浏览器验收） |
 | 12. 数据层：四存储键+FIFO+导出导入+会话复盘 | Task 22-24 | Task 22 ✅（存储+记录本手）；Task 23 ✅（导出导入）；**Task 24 ✅（历史复盘，阶段D完成）** |
-| 13. 部署上线+真机验收 | Task 26-27 | ⬜ 未开始（PWA基础在 Task 26；需用户提供 GitHub 账号） |
+| 13. 部署上线+真机验收 | Task 26-27 | **Task 26 ✅（PWA manifest+SW+图标，离线DevTools检查分期至 Task 27）**；Task 27 未开始（需用户提供 GitHub 账号） |
 
 ### 阶段C：远期可选
 12. ⬜ PWA增强（manifest、Service Worker离线缓存、添加到主屏幕引导）
