@@ -20,9 +20,10 @@ import { buildHandRecord, loadAll, saveHands, saveSessions, saveOpponents, saveS
 import { exportAll, importAll } from './exporter.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
+import { openTablePage, openFullScreen } from './ui/tablePage.js';
 
 document.getElementById('app').innerHTML = `
-  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="desktop-topbar" class="dim num"></span> <span id="session-bar"></span></header>
+  <header id="topbar" class="card"><b>♠ 德扑助手</b> <span id="street-badge" class="num"></span> <span id="desktop-topbar" class="dim num"></span> <button id="dt-gto">GTO图</button> <button id="dt-settings">设置</button> <span id="session-bar"></span></header>
   <div id="workspace">
     <section id="ws-input"></section>
     <section id="ws-result"></section>
@@ -60,16 +61,14 @@ function updateDesktopTopbar() {
     ? `${streetOf(state.board)} · ${state.playerCount}人桌 · ${state.opponents.length}对手 · 🎯画像 · 快捷键可用` : '';
 }
 
-function switchPage(id) {
-  currentPage = id;
-  baseSwitchPage(id);
-  if (id === 'gto') renderChartPage($('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
-  if (id === 'history') renderHistoryPage($('page-history'), {
-    filter: historyFilter,
-    onFilter: f => { historyFilter = f; switchPage('history'); },
-    onOpenHand: h => openReviewDialog(h),
-  });
-  if (id === 'settings') renderSettingsPage($('page-settings'), {
+/**
+ * 设置页 handlers（Batch B 抽取为模块级函数，供标签页与桌面端设置浮层两处复用）。
+ * @param {() => void} [reopen] 浮层模式的重渲回调（导入成功/清空后重建浮层内容）；
+ *   缺省 = 标签页模式（switchPage 重渲 page-settings）。
+ */
+function settingsHandlers(reopen) {
+  const re = reopen ?? (() => switchPage('settings'));
+  return {
     onExport() {
       const json = exportAll();
       const ts = new Date();
@@ -85,9 +84,9 @@ function switchPage(id) {
       if (r.ok) {
         const d = loadAll();
         setPatch({ opponents: d.opponents, settings: d.settings ?? state.settings });
-        refresh(); // 计算页/桌面信息条按导入后数据重建（须在 switchPage 之前，桌面模式 refresh 会清空 page-settings）
+        refresh(); // 计算页/桌面信息条按导入后数据重建（须在重渲之前，桌面模式 refresh 会清空 page-settings）
       }
-      if (r.ok) switchPage('settings'); // 先重渲使控件反映导入后的 settings
+      if (r.ok) re(); // 先重渲使控件反映导入后的 settings（标签页 or 浮层）
       // 反馈写在重渲后的新 DOM 上，避免被立即重建冲掉；timer 防连点竞争
       const btn = $('s-import');
       if (btn) {
@@ -101,16 +100,46 @@ function switchPage(id) {
       if (!confirm('确定清空所有历史记录与回合？对手档案保留')) return;
       saveHands([]);
       saveSessions([]);
+      if (reopen) { re(); if (desktop) renderDesktopHistory(); return; } // 浮层模式：重渲浮层内容，桌面常驻历史栏同步
       if (!desktop) { // 手机布局：按需重渲历史/设置页；桌面栏由下方 renderDesktopHistory 同步
         switchPage('history');
         switchPage('settings');
       }
       if (desktop) renderDesktopHistory(); // 桌面栏常驻历史，同步刷新
     },
+  };
+}
+
+/** 桌面端 GTO 图浮层：与手机 GTO 标签页共用同一模块级 gtoScenario，选场景后同步 */
+function openGtoOverlay() {
+  openFullScreen('GTO 图', body => {
+    renderChartPage(body, gtoScenario, s => { gtoScenario = s; openGtoOverlay(); });
   });
+}
+
+/** 桌面端设置浮层：复用 settingsHandlers，重渲走浮层内容重建 */
+function openSettingsOverlay() {
+  openFullScreen('设置', body => {
+    renderSettingsPage(body, settingsHandlers(() => openSettingsOverlay()));
+  });
+}
+
+function switchPage(id) {
+  currentPage = id;
+  baseSwitchPage(id);
+  if (id === 'gto') renderChartPage($('page-gto'), gtoScenario, s => { gtoScenario = s; switchPage('gto'); });
+  if (id === 'history') renderHistoryPage($('page-history'), {
+    filter: historyFilter,
+    onFilter: f => { historyFilter = f; switchPage('history'); },
+    onOpenHand: h => openReviewDialog(h),
+  });
+  if (id === 'settings') renderSettingsPage($('page-settings'), settingsHandlers());
 }
 renderTabbar($('tabbar'), switchPage);
 renderSessionBar($('session-bar'));
+// Batch B：桌面端 GTO图/设置 入口（仅 ≥1024px 可见，CSS 控制；浮层手机/桌面均可用）
+$('dt-gto').addEventListener('click', openGtoOverlay);
+$('dt-settings').addEventListener('click', openSettingsOverlay);
 
 /** 记录本手：汇集 state → HandRecord 入库（FIFO），同步对手观察与会话计数，按钮短暂反馈"已记录" */
 window.__recordHand = () => {
@@ -161,8 +190,23 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   // ② 我的位置与翻前场景
   step(root, '② 我的位置与翻前场景');
   renderPositionBar(add(), patch => { setPatch(patch); refresh(); }, () => state);
-  // ③ 对手档案
-  step(root, '③ 对手档案');
+  // ③ 对手档案（标题行附「🪑 牌桌」入口：全屏牌桌视图编辑座次/庄家/对手类型）
+  const step3Row = document.createElement('div');
+  step3Row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+  const step3Title = document.createElement('div');
+  step3Title.className = 'step-title';
+  step3Title.style.margin = '10px 2px 4px 0';
+  step3Title.textContent = '③ 对手档案';
+  const tableBtn = document.createElement('button');
+  tableBtn.textContent = '🪑 牌桌';
+  tableBtn.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 14px;min-height:36px;';
+  tableBtn.addEventListener('click', () => openTablePage({
+    onEditOpponent: o => openOpponentDrawer(o), // 抽屉是 <dialog> 顶层弹出，不受浮层 z-index 影响
+    onBack: () => refresh(), // 返回牌局：按牌桌页改动重绘计算页
+  }));
+  step3Row.appendChild(step3Title);
+  step3Row.appendChild(tableBtn);
+  root.appendChild(step3Row);
   renderOpponentCards(add(), {
     opponents: state.opponents,
     onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults('TAG')] }); saveOpponents(state.opponents); refresh(); },
@@ -262,6 +306,7 @@ document.addEventListener('keydown', e => {
   if (e.repeat) return; // 长按不连发
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
   if (document.querySelector('dialog[open]')) { resetPending(); return; } // 弹层打开时不抢按键，并清掉残留半选
+  if (document.querySelector('.fs-overlay')) return; // 全屏浮层（牌桌/GTO/设置）打开时快捷键不误触
   const RANK_CHARS = 'AKQJT98765432';
   if (RANK_CHARS.includes(e.key) || ['1', '2', '3', '4'].includes(e.key)) { e.preventDefault(); handleKeyEntry(e.key); return; }
   if (e.key === 'Enter') window.__confirmCards?.();

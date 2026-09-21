@@ -38,3 +38,31 @@ button, .tap { min-height: 44px; }                     /* 触控目标约束 */
 /* ---- Task 25 CARRY-FIX：触控目标与危险按钮 ---- */
 select, input[type="checkbox"] { min-height: 44px; }
 .btn-danger { color: var(--danger); }
+
+/* ---- Batch B：全屏浮层（牌桌页 / 桌面端 GTO图 / 设置 共用 overlay 模式）---- */
+.fs-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; display: flex; flex-direction: column; }
+.fs-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; }
+.fs-back { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 14px; }
+.fs-body { flex: 1; padding-bottom: 24px; }
+
+/* ---- Batch B：牌桌页 ---- */
+.table-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.table-wrap { position: relative; max-width: 560px; height: 340px; margin: 16px auto; }
+.table-oval { position: absolute; left: 8%; right: 8%; top: 14%; bottom: 14%; border-radius: 50%; background: radial-gradient(ellipse at center, #1a7a3d 0%, #0e4d26 70%, #0a381b 100%); border: 6px solid #3b2412; box-shadow: inset 0 0 40px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4); }
+.table-seats { position: absolute; inset: 0; }
+.table-seat { position: absolute; transform: translate(-50%, -50%); width: 64px; min-height: 56px; border-radius: 999px; border: 2px solid var(--border); background: var(--bg-card); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; font-size: 12px; line-height: 1.2; gap: 1px; }
+.table-seat.is-dealer { border-color: var(--accent); }
+.table-seat .seat-type { font-size: 10px; color: var(--text-dim); }
+.table-seat .seat-pos { background: var(--accent); color: #000; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 700; }
+.table-seat .seat-btn-d { position: absolute; top: -10px; right: -6px; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: #000; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.seat-menu { position: sticky; bottom: 12px; margin: 0 auto; width: min(320px, calc(100% - 24px)); flex-direction: column; gap: 6px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; z-index: 5; box-shadow: 0 -4px 20px rgba(0,0,0,.4); }
+.seat-menu button { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+/* 320px 小屏：座位整体缩放防溢出（触控目标等比缩小，可接受） */
+@media (max-width: 359px) { .table-wrap { transform: scale(0.82); transform-origin: top center; margin-bottom: -50px; } }
+
+/* ---- Batch B：桌面端顶栏 GTO图/设置 入口（仅 ≥1024px 可见）---- */
+#dt-gto, #dt-settings { display: none; }
+@media (min-width: 1024px) {
+  #dt-gto, #dt-settings { display: inline-block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 6px 14px; min-height: 36px; }
+  #dt-gto:hover, #dt-settings:hover { border-color: var(--accent); }
+}
