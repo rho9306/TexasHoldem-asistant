@@ -1,5 +1,5 @@
-// 应用入口 + 计算页完整装配（Task 19）+ 桌面四栏工作台/键盘快捷键（Task 25）
-// 手机（<1024px）：四标签页布局不变。桌面（≥1024px）：#workspace 四栏 ①牌面+局面 ②结果 ③策略 ④历史。
+// 应用入口 + 计算页完整装配（Task 19）+ 桌面三栏工作台/键盘快捷键（Task 25，UX 修正改三栏）
+// 手机（<1024px）：四标签页布局不变。桌面（≥1024px）：#workspace 三栏 ①牌面+局面 ②结果+策略 ③历史。
 // matchMedia 变化时整树重建。快捷键：rank+花色数字录入、Enter 确认部分选择、C 清空、Space 重算。
 import './style.css';
 import { state, setPatch } from './state.js';
@@ -26,7 +26,6 @@ document.getElementById('app').innerHTML = `
   <div id="workspace">
     <section id="ws-input"></section>
     <section id="ws-result"></section>
-    <section id="ws-strategy"></section>
     <section id="ws-history"></section>
   </div>
   <main id="page-calc" class="page active"></main>
@@ -36,7 +35,7 @@ document.getElementById('app').innerHTML = `
   <nav id="tabbar"></nav>`;
 
 const $ = id => document.getElementById(id);
-const WS_IDS = ['ws-input', 'ws-result', 'ws-strategy', 'ws-history'];
+const WS_IDS = ['ws-input', 'ws-result', 'ws-history'];
 const PAGE_IDS = ['page-calc', 'page-gto', 'page-history', 'page-settings'];
 
 // GTO 图页：每次切入重渲，跟随当前 state（用户点选场景后以所选为准）
@@ -141,30 +140,30 @@ window.__recordHand = () => {
 let resultEl = null, strategyEl = null;
 
 /**
- * 计算页装配（参数化目标容器）。split=false（手机）：9 块顺序写入 pageRoot。
- * split=true（桌面）：1-6 块 + 记录按钮 → inputRoot，result/strategy 容器 → resultRoot/strategyRoot。
+ * 计算页装配（参数化目标容器）。块顺序按真实牌局编号（手机与桌面输入列一致）：
+ * ①手牌 ②位置 ③对手 ④公共牌 ⑤底池 → ⑥结果 ⑦画像+策略 → 记录本手。
+ * split=false（手机）：全部顺序写入 pageRoot。
+ * split=true（桌面）：①-⑤ → inputRoot；⑥⑦ + 记录按钮 → resultRoot（中栏，结果在上策略在下）。
  */
-function buildCalc(pageRoot, inputRoot, resultRoot, strategyRoot, split) {
+function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   const root = split ? inputRoot : pageRoot;
-  const add = tag => { const d = document.createElement(tag); root.appendChild(d); return d; };
-  // 1. 桌子画像横幅
-  renderTableProfile(add('div'), state.opponents, state.settings.autoTableAdaptation);
-  // 2/3. 手牌/公共牌选择器（已选牌互斥置灰）
+  const out = split ? resultRoot : root; // 结果/策略/记录所在列
+  const add = (parent = root) => { const d = document.createElement('div'); parent.appendChild(d); return d; };
+  // 统一样式的编号步骤标题（常量字符串，textContent 安全）
+  const step = (parent, text) => { const d = document.createElement('div'); d.className = 'step-title'; d.textContent = text; parent.appendChild(d); };
+  // ① 我的手牌（已选牌互斥置灰；点击已选牌可取消）
   const used = [...state.hand, ...state.board];
-  renderCardPicker(add('div'), {
+  renderCardPicker(add(), {
     slots: 2, usedCards: used, initial: [...state.hand],
-    title: '我的手牌',
+    title: '① 我的手牌',
     onPick: cards => { setPatch({ hand: cards }); refresh(); },
   });
-  renderCardPicker(add('div'), {
-    slots: 5, usedCards: used, initial: [...state.board],
-    title: '公共牌（3/4/5张随街填写，翻前可不填）',
-    onPick: cards => { setPatch({ board: cards }); refresh(); },
-  });
-  // 4. 位置条
-  renderPositionBar(add('div'), patch => { setPatch(patch); refresh(); }, () => state);
-  // 5. 对手卡
-  renderOpponentCards(add('div'), {
+  // ② 我的位置与翻前场景
+  step(root, '② 我的位置与翻前场景');
+  renderPositionBar(add(), patch => { setPatch(patch); refresh(); }, () => state);
+  // ③ 对手档案
+  step(root, '③ 对手档案');
+  renderOpponentCards(add(), {
     opponents: state.opponents,
     onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults('TAG')] }); saveOpponents(state.opponents); refresh(); },
     onPreset: () => {
@@ -174,35 +173,46 @@ function buildCalc(pageRoot, inputRoot, resultRoot, strategyRoot, split) {
     },
     onEdit: o => openOpponentDrawer(o),
   });
-  // 6. 底池表单
-  renderPotForm(add('div'), v => { setPatch(v); updateResultsOnly(); }); // 只刷结果/策略区，输入区不重建（保焦点）
-  // 7. 结果 + 8. 策略卡组（保留容器引用，recalc 完成后就地刷新，不整页重建）
-  resultEl = split ? document.createElement('div') : add('div');
+  // ④ 公共牌（随街补填）
+  renderCardPicker(add(), {
+    slots: 5, usedCards: used, initial: [...state.board],
+    title: '④ 公共牌（随街补填，翻前可不填）',
+    onPick: cards => { setPatch({ board: cards }); refresh(); },
+  });
+  // ⑤ 底池与筹码
+  step(root, '⑤ 底池与筹码');
+  renderPotForm(add(), v => { setPatch(v); updateResultsOnly(); }); // 只刷结果/策略区，输入区不重建（保焦点）
+  // ⑥ 结果与建议（保留容器引用，recalc 完成后就地刷新，不整页重建）
+  step(out, '⑥ 结果与建议');
+  resultEl = document.createElement('div');
+  out.appendChild(resultEl);
   renderResult(resultEl, state.result);
-  if (split) resultRoot.appendChild(resultEl);
-  strategyEl = split ? document.createElement('div') : add('div');
+  // ⑦ 全桌画像 + 策略分析（画像横幅从页首移到这里，紧贴策略卡组）
+  step(out, '⑦ 全桌画像与策略分析');
+  renderTableProfile(add(out), state.opponents, state.settings.autoTableAdaptation);
+  strategyEl = document.createElement('div');
+  out.appendChild(strategyEl);
   renderStrategyPanel(strategyEl, state.strategy, state.board.length);
-  if (split) strategyRoot.appendChild(strategyEl);
-  // 9. 记录本手（Task 22 接线 window.__recordHand）
+  // 记录本手（Task 22 接线 window.__recordHand）——保持在最后（桌面也在中栏策略之后，与手机顺序一致）
   const rec = document.createElement('button');
   rec.id = 'record-hand-btn';
   rec.textContent = '✓ 记录本手到历史';
   rec.style.cssText = 'width:calc(100% - 16px);margin:8px;background:var(--accent);border:none;border-radius:10px;color:#000;font-weight:700;padding:12px;';
   rec.addEventListener('click', () => window.__recordHand?.());
-  root.appendChild(rec);
+  out.appendChild(rec);
 }
 
-/** 按当前模式装配：手机 → page-calc；桌面 → ws-input/result/strategy + 常驻 ws-history */
+/** 按当前模式装配：手机 → page-calc；桌面 → ws-input/result + 常驻 ws-history */
 function renderCalc() {
   if (desktop) {
     for (const id of WS_IDS) $(id).innerHTML = '';
     for (const id of PAGE_IDS) $(id).innerHTML = '';
-    buildCalc($('page-calc'), $('ws-input'), $('ws-result'), $('ws-strategy'), true);
+    buildCalc($('page-calc'), $('ws-input'), $('ws-result'), true);
     renderDesktopHistory();
   } else {
     for (const id of WS_IDS) $(id).innerHTML = ''; // 手机模式工作台清空，避免重复内容
     $('page-calc').innerHTML = '';
-    buildCalc($('page-calc'), null, null, null, false);
+    buildCalc($('page-calc'), null, null, false);
   }
   updateDesktopTopbar();
 }

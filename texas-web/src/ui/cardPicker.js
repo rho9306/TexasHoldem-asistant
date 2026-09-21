@@ -80,19 +80,31 @@ export function renderCardPicker(container, { slots, usedCards = [], initial = [
   const pickedEl = wrap.querySelector('.picked');
   pickedEl.textContent = picked.join(' ');
   grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(13, 1fr)';
+  // auto-fill + minmax：按容器宽度自动决定每行列数（手机约8-9键/行），不再横向滚动
+  grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(34px, 1fr))';
   grid.style.gap = '4px';
   for (const r of RANKS) for (const [s, sym] of SUITS) {
     const card = r + s;
     const b = document.createElement('button');
     b.dataset.card = card;
     b.innerHTML = `${r}<br>${sym}`;
-    b.style.minWidth = '30px';
-    if (usedCards.includes(card) || picked.includes(card)) { b.disabled = true; b.style.opacity = 0.3; }
+    const committed = initial.includes(card); // 本选牌器已提交的牌（initial 回显）→ 可点击取消
+    const occupied = usedCards.includes(card) && !committed; // 被其他区域占用 → 保持置灰不可点
+    if (occupied || picked.includes(card)) b.style.opacity = 0.3;
+    if (occupied) b.disabled = true;
+    // 点击 = 切换选中：未选→选（满 slots 提交 onPick）；已选→移除（若是已提交牌则立即提交缩减集合）
     b.addEventListener('click', () => {
-      if (picked.includes(card) || picked.length >= slots) return;
+      if (occupied) return;
+      if (picked.includes(card)) {
+        picked.splice(picked.indexOf(card), 1);
+        b.style.opacity = picked.includes(card) ? 0.3 : '';
+        pickedEl.textContent = picked.join(' ');
+        if (committed) onPick([...picked]); // 取消的是已提交牌 → 立即提交缩减后的集合
+        return;
+      }
+      if (picked.length >= slots) return;
       picked.push(card);
-      b.disabled = true;
+      b.style.opacity = 0.3;
       pickedEl.textContent = picked.join(' ');
       if (picked.length === slots) onPick([...picked]);
     });
