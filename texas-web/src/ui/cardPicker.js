@@ -20,6 +20,7 @@ function pushCard(inst, card) {
   const b = inst.wrap.querySelector(`[data-card="${card}"]`);
   if (b) b.disabled = true;
   inst.pickedEl.textContent = inst.picked.join(' ');
+  if (inst.syncUI) inst.syncUI(); // 键盘录入也刷新确认按钮可见性
   if (inst.picked.length === inst.slots) inst.onPick([...inst.picked]);
   return true;
 }
@@ -58,6 +59,7 @@ export function confirmPartials() {
     if (inst.picked.length > 0 && inst.picked.length < inst.slots) {
       const cards = [...inst.picked];
       inst.picked.length = 0;
+      if (inst.syncUI) inst.syncUI(); // confirmPartials 清空了 picked（同引用），同步确认按钮隐藏
       inst.onPick(cards);
       any = true;
     }
@@ -99,6 +101,7 @@ export function renderCardPicker(container, { slots, usedCards = [], initial = [
         picked.splice(picked.indexOf(card), 1);
         b.style.opacity = picked.includes(card) ? 0.3 : '';
         pickedEl.textContent = picked.join(' ');
+        syncUI(); // 取消选中 → 刷新确认按钮可见性
         if (committed) onPick([...picked]); // 取消的是已提交牌 → 立即提交缩减后的集合
         return;
       }
@@ -106,11 +109,37 @@ export function renderCardPicker(container, { slots, usedCards = [], initial = [
       picked.push(card);
       b.style.opacity = 0.3;
       pickedEl.textContent = picked.join(' ');
+      syncUI(); // 新选中 → 刷新确认按钮可见性
       if (picked.length === slots) onPick([...picked]);
     });
     grid.appendChild(b);
   }
+  // ---- 部分确认按钮（仅公共牌选牌器 slots=5）：手机用户选3/4张后可提交进系统 ----
+  // 手牌选牌器 slots=2 选满即自动提交，部分确认无意义，不加。
+  let confirmBtn = null, syncUI = null;
+  if (slots === 5) {
+    confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.textContent = `✓ 确认当前公共牌（${picked.length}张）`;
+    confirmBtn.style.display = 'none'; // 1 <= picked < slots 时才显示
+    confirmBtn.addEventListener('click', () => {
+      // 与 confirmPartials 单实例逻辑一致：快照→清空→刷新显示→提交
+      const cards = [...picked];
+      picked.length = 0;
+      pickedEl.textContent = '';
+      syncUI();
+      onPick(cards); // main.js 的 onPick 会 setPatch+refresh 重建选牌器
+    });
+    wrap.querySelector('.card').appendChild(confirmBtn);
+  }
+  // 同步按钮可见性与文案（所有改变 picked 的路径都要调用）
+  syncUI = () => {
+    if (!confirmBtn) return;
+    const show = picked.length >= 1 && picked.length < slots;
+    confirmBtn.style.display = show ? '' : 'none';
+    confirmBtn.textContent = `✓ 确认当前公共牌（${picked.length}张）`;
+  };
   container.appendChild(wrap);
   pruneInstances();
-  instances.push({ wrap, pickedEl, picked, slots, used: usedCards, onPick, hintEl: wrap.querySelector('.kbd-hint') });
+  instances.push({ wrap, pickedEl, picked, slots, used: usedCards, onPick, hintEl: wrap.querySelector('.kbd-hint'), syncUI });
 }
