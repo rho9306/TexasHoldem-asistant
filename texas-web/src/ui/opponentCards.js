@@ -1,7 +1,8 @@
 // 对手档案卡列表（设计§5.2/§7：每对手独立卡片，横滑，类型徽章+VPIP观察值）
 import { TYPE_DEFAULTS } from '../strategy/ranges.js';
 
-export function opponentDefaults(type) {
+// type=null 表示「默认」对手：不预设四类型标签，数学层按 TAG 中性参数兜底（胜率不变）
+export function opponentDefaults(type = null) {
   const d = TYPE_DEFAULTS[type] ?? TYPE_DEFAULTS.TAG;
   return {
     id: 'opp-' + Math.random().toString(36).slice(2, 8),
@@ -12,6 +13,12 @@ export function opponentDefaults(type) {
     handsSeen: 0,
     vpipObs: null,
   };
+}
+
+/** 类型显示名：null → 「默认」（中性），未知类型原样回显 */
+export function typeLabel(type) {
+  if (type == null) return '默认';
+  return TYPE_LABEL[type] ?? type;
 }
 
 export const TYPE_LABEL = {
@@ -31,7 +38,7 @@ export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPre
   const wrap = document.createElement('div');
   wrap.className = 'card';
   wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
-      <b>对手档案</b><span><button id="opp-preset">一键全员预设</button> <button id="opp-add">＋</button></span></div>
+      <b>对手档案</b><span><button id="opp-preset">一键全员设为紧凶</button> <button id="opp-add">＋</button></span></div>
     <div class="opp-list" style="display:flex;overflow-x:auto;gap:8px;padding:8px 0;"></div>`;
   container.appendChild(wrap);
 
@@ -42,9 +49,10 @@ export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPre
     const vpipTxt = o.handsSeen >= 20 && o.vpipObs != null ? ` · VPIP ${o.vpipObs}%` : '';
     // 承接项(b)：名称为用户输入（抽屉命名后持久化），必须 textContent 构建，防存储型XSS
     const nameEl = document.createElement('b');
-    nameEl.textContent = o.name || TYPE_LABEL[o.type] || o.type;
+    nameEl.textContent = o.name || typeLabel(o.type);
     const subEl = document.createElement('small');
-    subEl.textContent = `${TYPE_LABEL[o.type] ?? o.type}${vpipTxt}`;
+    subEl.textContent = `${typeLabel(o.type)}${vpipTxt}`;
+    if (o.type == null) subEl.style.color = 'var(--text-dim)'; // 默认对手徽章用中性灰色，与4类型区分
     card.appendChild(nameEl);
     card.appendChild(document.createElement('br'));
     card.appendChild(subEl);

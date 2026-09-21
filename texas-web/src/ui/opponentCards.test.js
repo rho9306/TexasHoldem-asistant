@@ -1,18 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { opponentDefaults, renderOpponentCards } from './opponentCards.js';
+import { opponentDefaults, renderOpponentCards, typeLabel } from './opponentCards.js';
 
 describe('opponentDefaults', () => {
-  it('来自类型默认', () => {
-    const d = opponentDefaults('LAG');
-    expect(d.looseness).toBe(62);
-    expect(d.aggression).toBe(75);
-    expect(d.type).toBe('LAG');
+  it('新对手默认 type=null（不预设标签），滑条取 TAG 中性参数', () => {
+    const d = opponentDefaults();
+    expect(d.type).toBeNull();
+    expect(d.looseness).toBe(35); // 与 TAG 默认一致 → 数学层结果不变
+    expect(d.aggression).toBe(60);
     expect(d.handsSeen).toBe(0);
     expect(d.vpipObs).toBeNull();
     expect(d.id).toMatch(/^opp-/);
   });
-  it('未知类型回退 TAG', () => {
+  it('显式指定类型仍生效；未知类型回退 TAG 参数', () => {
+    expect(opponentDefaults('LAG').type).toBe('LAG');
+    expect(opponentDefaults('LAG').looseness).toBe(62);
     expect(opponentDefaults('???').looseness).toBe(35);
+  });
+  it('typeLabel：null → 「默认」，未知类型原样', () => {
+    expect(typeLabel(null)).toBe('默认');
+    expect(typeLabel('TAG')).toBe('紧凶');
+    expect(typeLabel('???')).toBe('???');
   });
 });
 
@@ -39,5 +46,11 @@ describe('renderOpponentCards', () => {
     document.querySelector('#opp-add').click();
     document.querySelector('#opp-preset').click();
     expect(log).toEqual([['edit', 'TAG'], ['add'], ['preset']]);
+    // 默认对手（type=null）：徽章显示「默认」而非类型标签
+    const dflt = { ...opponentDefaults(), name: '' };
+    renderOpponentCards(document.getElementById('oc'), { opponents: [dflt], onEdit: () => {}, onAdd: () => {}, onPreset: () => {} });
+    const card = document.querySelector('.opp-list > *');
+    expect(card.textContent).toContain('默认');
+    expect(card.textContent).not.toContain('紧凶');
   });
 });

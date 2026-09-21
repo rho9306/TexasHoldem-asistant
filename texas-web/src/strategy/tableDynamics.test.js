@@ -19,3 +19,14 @@ describe('tableDynamics', () => {
     expect(adjustAdvice('fold', true, p, false)).toBe('');
   });
 });
+
+describe('tableProfile null 类型兜底', () => {
+  it('type=null 按 TAG 中性参数计入桌画像（与 TAG 一致）', async () => {
+    const { tableProfile } = await import('./tableDynamics.js');
+    const withNull = tableProfile([{ type: null }, { type: null }, { type: null }]);
+    const withTag = tableProfile([{ type: 'TAG' }, { type: 'TAG' }, { type: 'TAG' }]);
+    expect(withNull.vpipAvg).toBe(withTag.vpipAvg);
+    expect(withNull.aggrAvg).toBe(withTag.aggrAvg);
+    expect(withNull.label).toBe(withTag.label);
+  });
+});

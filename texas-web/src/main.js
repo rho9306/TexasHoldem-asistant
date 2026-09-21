@@ -219,7 +219,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   root.appendChild(step3Row);
   renderOpponentCards(add(), {
     opponents: state.opponents,
-    onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults('TAG')] }); saveOpponents(state.opponents); refresh(); },
+    onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults()] }); saveOpponents(state.opponents); refresh(); }, // 新对手 type=null：界面不预设标签
     onPreset: () => {
       setPatch({ opponents: state.opponents.map(o => ({ ...o, type: 'TAG', looseness: TYPE_DEFAULTS.TAG.looseness, aggression: TYPE_DEFAULTS.TAG.aggression })) });
       saveOpponents(state.opponents);
@@ -376,7 +376,7 @@ export function openOpponentDrawer(o) {
   const aggr = dlg.querySelector('#od-aggr');
   const looseV = dlg.querySelector('#od-loose-v');
   const aggrV = dlg.querySelector('#od-aggr-v');
-  let editType = o.type ?? 'TAG';
+  let editType = o.type; // 保持 null：抽屉只有点了4类型快选才写 type，否则保存后仍是「默认」
   nameInput.value = o.name ?? '';
   loose.value = o.looseness ?? 35;
   aggr.value = o.aggression ?? 60;
@@ -387,19 +387,28 @@ export function openOpponentDrawer(o) {
 
   // 4类型快选：点击把两滑条同步为 TYPE_DEFAULTS
   const typesBox = dlg.querySelector('#od-types');
+  const typeBtns = [];
   for (const t of Object.keys(TYPE_DEFAULTS)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.textContent = TYPE_LABEL[t] ?? t;
+    b.style.cssText = 'min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:4px 10px;';
     b.addEventListener('click', () => {
       loose.value = TYPE_DEFAULTS[t].looseness;
       aggr.value = TYPE_DEFAULTS[t].aggression;
       looseV.textContent = loose.value;
       aggrV.textContent = aggr.value;
       editType = t;
+      paint();
     });
+    typeBtns.push([b, t]);
     typesBox.appendChild(b);
   }
+  const paint = () => {
+    // 当前选中类型高亮；type 为 null（默认）时全部不高亮
+    for (const [bt, tt] of typeBtns) bt.style.borderColor = tt === editType ? 'var(--accent)' : 'var(--border)';
+  };
+  paint();
 
   dlg.querySelector('#od-del').addEventListener('click', () => {
     setPatch({ opponents: state.opponents.filter(x => x.id !== o.id) });

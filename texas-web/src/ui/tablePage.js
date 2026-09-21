@@ -6,7 +6,7 @@
 // 都走 nextRound()，天然一致。
 import { state, setPatch } from '../state.js';
 import { saveOpponents } from '../storage.js';
-import { opponentDefaults, TYPE_LABEL } from './opponentCards.js';
+import { opponentDefaults, TYPE_LABEL, typeLabel } from './opponentCards.js';
 import { positionsFor } from './positionBar.js';
 
 /**
@@ -79,7 +79,7 @@ function seatCoords(i, n) {
 function syncOpponents(n) {
   const need = n - 1;
   const ops = [...state.opponents];
-  while (ops.length < need) ops.push(opponentDefaults('TAG'));
+  while (ops.length < need) ops.push(opponentDefaults()); // 新对手不预设类型标签（type=null，数学按中性参数）
   if (ops.length > need) ops.length = need;
   return ops;
 }
@@ -236,10 +236,11 @@ export function renderTableInto(container, handlers = {}) {
       } else {
         const o = state.opponents[i - 1];
         const nm = document.createElement('span');
-        nm.textContent = (o?.name || TYPE_LABEL[o?.type] || '对手'); // 用户输入走 textContent，防XSS
+        nm.textContent = (o?.name || typeLabel(o?.type) || '对手'); // 用户输入走 textContent，防XSS
         const ty = document.createElement('span');
         ty.className = 'seat-type';
-        ty.textContent = TYPE_LABEL[o?.type] ?? o?.type ?? '';
+        ty.textContent = typeLabel(o?.type);
+        if (o?.type == null) ty.style.color = 'var(--text-dim)'; // 默认对手徽章用中性灰
         s.appendChild(nm);
         if (ty.textContent) s.appendChild(ty);
       }

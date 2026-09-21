@@ -6,7 +6,7 @@ function render() {
   setPatch({ pot: 0, call: 0, myStack: 100, oppStack: 100 }); // 隔离跨测试的 state 污染
   document.body.innerHTML = '<div id="pf"></div>';
   let v = null;
-  renderPotForm(document.getElementById('pf'), x => (v = x));
+  renderPotForm(document.getElementById('pf'), x => { setPatch(x); v = x; }); // 走真实 setPatch 管线（守卫保留语义依赖 state）
   return {
     get: () => v,
     input: (name, val) => {
@@ -28,14 +28,30 @@ describe('potForm', () => {
     expect(v.pot).not.toBeNaN();
     expect(document.querySelector('#pf input[name=pot]').classList.contains('invalid')).toBe(true);
   });
-  it('从state预填输入框value（重启回填/重渲不丢已填金额）', () => {
+  it('输入框初始为空，placeholder 提示默认值；对手筹码框已删除', () => {
     document.body.innerHTML = '<div id="pf"></div>';
     setPatch({ pot: 120, call: 30, myStack: 500, oppStack: 480 });
     renderPotForm(document.getElementById('pf'), () => {});
-    expect(document.querySelector('#pf input[name=pot]').value).toBe('120');
-    expect(document.querySelector('#pf input[name=call]').value).toBe('30');
-    expect(document.querySelector('#pf input[name=myStack]').value).toBe('500');
+    // 不再预填 state 值：显示空，placeholder 提示生效默认值
+    expect(document.querySelector('#pf input[name=pot]').value).toBe('');
+    expect(document.querySelector('#pf input[name=pot]').placeholder).toBe('默认 0');
+    expect(document.querySelector('#pf input[name=call]').placeholder).toBe('默认 0');
+    expect(document.querySelector('#pf input[name=myStack]').placeholder).toBe('默认 100');
     expect(document.querySelector('#pf input[name=oppStack]')).toBeNull(); // 对手筹码框已删除
+  });
+  it('清空输入框 → 回到默认值（pot=0/call=0/myStack=100）', () => {
+    const t = render();
+    t.input('pot', '50');
+    expect(t.get().pot).toBe(50);
+    t.input('pot', ''); // 清空 = 默认 0
+    expect(t.get().pot).toBe(0);
+    t.input('call', '20');
+    t.input('call', '');
+    expect(t.get().call).toBe(0);
+    t.input('myStack', '250');
+    t.input('myStack', '');
+    expect(t.get().myStack).toBe(100);
+    expect(t.get().oppStack).toBe(100); // 同步不变
   });
   it('对手筹码同步：改我的筹码 → onChange patch 携带 oppStack 同值', () => {
     const t = render();
@@ -59,14 +75,15 @@ describe('potForm', () => {
     t.clickPreset('全压');
     expect(t.get().call).toBe(80);
   });
-  it('底池为空/非法时快捷档无效果（call 不变）', () => {
+  it('清空底池后快捷档按默认 pot=0 计算；非法底池守卫', () => {
     const t = render();
-    t.input('pot', ''); // 清空底池（空=非法）
-    t.input('call', '7');
+    t.input('pot', ''); // 清空底池 = 默认 0
     t.clickPreset('½池');
-    expect(t.get().call).toBe(7); // pot 为空 → 无效果
-    t.input('pot', '-3');
+    expect(t.get().call).toBe(0); // ½ × 0 = 0
+    t.input('pot', '10');
+    t.input('pot', '-3'); // 非法 → state.pot 保留原值 10
+    t.input('call', '7');
     t.clickPreset('满池');
-    expect(t.get().call).toBe(7); // pot 非法 → 无效果
+    expect(t.get().call).toBe(10); // pot 非法守卫 → 快捷档仍基于旧 state 值
   });
 });

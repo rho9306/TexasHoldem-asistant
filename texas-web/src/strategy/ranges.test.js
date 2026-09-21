@@ -41,3 +41,19 @@ describe('ranges', () => {
     expect(TYPE_DEFAULTS['loose-passive'].vpip).toBe(42);
   });
 });
+
+describe('maskForOpponent null 类型兜底', () => {
+  it('type=null 与 TAG 的掩码/宽度完全一致（默认对手数学不变）', async () => {
+    const { maskForOpponent } = await import('./ranges.js');
+    const ctx = { position: 'BB', role: 'open' };
+    const a = maskForOpponent({ type: null, looseness: 35, aggression: 60 }, ctx);
+    const b = maskForOpponent({ type: 'TAG', looseness: 35, aggression: 60 }, ctx);
+    expect(a.widthPct).toBe(b.widthPct);
+    expect([...a.mask]).toEqual([...b.mask]);
+    // 也覆盖 defend 路径
+    const c = maskForOpponent({ type: null }, { position: 'BB', role: 'defend', raiserPosition: 'BTN' });
+    const d = maskForOpponent({ type: 'TAG' }, { position: 'BB', role: 'defend', raiserPosition: 'BTN' });
+    expect(c.widthPct).toBe(d.widthPct);
+    expect([...c.mask]).toEqual([...d.mask]);
+  });
+});
