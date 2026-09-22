@@ -12,6 +12,7 @@ import { renderResult } from './ui/resultPanel.js';
 import { renderStrategyPanel } from './ui/strategyPanel.js';
 import { renderTableProfile } from './ui/tableProfile.js';
 import { TYPE_DEFAULTS } from './strategy/ranges.js';
+import { settleNet } from './strategy/settle.js';
 import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
@@ -152,9 +153,72 @@ renderSessionBar($('session-bar'));
 $('dt-gto').addEventListener('click', openGtoOverlay);
 $('dt-settings').addEventListener('click', openSettingsOverlay);
 
-/** 记录本手：汇集 state → HandRecord 入库（FIFO），同步对手观察与会话计数，按钮短暂反馈"已记录" */
+/** 记录本手：结算开（默认）→ 弹窗选 赢/输/弃牌 自动算盈亏；关 → 净额 0 直接入库。
+ *  无手牌不入库（批次14审查留档项闭环）。 */
 window.__recordHand = () => {
-  const rec = buildHandRecord('未记录', { net: 0, ev: state.result?.evCall ?? 0 });
+  if (state.hand.length !== 2) {
+    const btn = $('record-hand-btn');
+    if (btn) {
+      btn.textContent = '先选 2 张手牌';
+      setTimeout(() => { btn.textContent = '✓ 记录本手到历史'; }, 1500);
+    }
+    return;
+  }
+  if (state.settings.settlement !== false) openSettlementDialog();
+  else recordWithNet(0);
+};
+
+/** 结算弹窗（批次15）：赢/输/弃牌 → 预填盈亏（可改）→ 确认入库并结算筹码 */
+function openSettlementDialog() {
+  $('settle-dlg')?.remove();
+  const dlg = document.createElement('dialog');
+  dlg.id = 'settle-dlg';
+  dlg.innerHTML = `
+    <div style="min-width:280px;display:flex;flex-direction:column;gap:12px;background:var(--bg);color:var(--text);">
+      <b>牌局结算</b>
+      <div id="sd-outcomes" style="display:flex;gap:8px;">
+        <button type="button" data-o="win" style="flex:1;min-height:44px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;">✅ 赢了</button>
+        <button type="button" data-o="lose" style="flex:1;min-height:44px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;">❌ 输了</button>
+        <button type="button" data-o="fold" style="flex:1;min-height:44px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;">🚪 弃牌</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;">盈亏 <input id="sd-net" type="number" step="any" style="flex:1;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;" /><span class="dim">（可改，如加注输）</span></label>
+      <div class="dim num" id="sd-hint">底池 ${state.pot} · 跟注 ${state.call}</div>
+      <div style="display:flex;justify-content:space-between;">
+        <button id="sd-cancel" type="button">取消</button>
+        <button id="sd-ok" type="button" style="background:var(--accent);color:#000;font-weight:700;">确认记录</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dlg);
+  const netInput = dlg.querySelector('#sd-net');
+  const hint = dlg.querySelector('#sd-hint');
+  const paint = sel => {
+    for (const b of dlg.querySelectorAll('#sd-outcomes button')) {
+      b.style.borderColor = b.dataset.o === sel ? 'var(--accent)' : 'var(--border)';
+      b.style.background = b.dataset.o === sel ? 'var(--bg-hover)' : 'var(--bg)';
+    }
+  };
+  let outcome = null;
+  for (const b of dlg.querySelectorAll('#sd-outcomes button')) {
+    b.addEventListener('click', () => {
+      outcome = b.dataset.o;
+      netInput.value = settleNet(outcome, state); // state.pot/state.call 同名字段直接可用
+      paint(outcome);
+    });
+  }
+  dlg.querySelector('#sd-cancel').addEventListener('click', () => close());
+  dlg.querySelector('#sd-ok').addEventListener('click', () => {
+    const net = +netInput.value;
+    if (!Number.isFinite(net)) return; // 非法金额不关弹窗，等修正
+    close();
+    recordWithNet(net);
+  });
+  function close() { try { dlg.close?.(); } catch { /* ignore */ } dlg.remove(); }
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+}
+
+/** 按净额入库：记录 → 对手观察 → 会话计数 → 筹码结算 → 刷新与按钮反馈 */
+function recordWithNet(net) {
+  const rec = buildHandRecord('未记录', { net, ev: state.result?.evCall ?? 0 });
   const { hands, sessions } = loadAll();
   hands.push(rec);
   saveHands(hands);
@@ -168,14 +232,17 @@ window.__recordHand = () => {
       : s);
     saveSessions(list);
   }
-  // 按钮反馈：短暂变"已记录"后还原
+  // 筹码结算（批次15）：后手随盈亏增减（不小于0），oppStack 同步；下一轮带着新筹码开
+  const stack = Math.max(0, state.myStack + net);
+  setPatch({ myStack: stack, oppStack: stack });
+  refresh(); // 重渲后 potForm 显示新后手；桌面历史栏在 renderCalc 内同步
+  // 按钮反馈：短暂变"已记录"后还原（写在重渲后的新 DOM 上）
   const btn = $('record-hand-btn');
   if (btn) {
     btn.textContent = '✓ 已记录';
     setTimeout(() => { btn.textContent = '✓ 记录本手到历史'; }, 1500);
   }
-  if (desktop) renderDesktopHistory(); // 桌面栏常驻历史，同步刷新
-};
+}
 
 let resultEl = null, strategyEl = null;
 

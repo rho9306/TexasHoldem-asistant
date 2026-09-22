@@ -119,10 +119,14 @@ export function nextRound() {
   roundCount += 1;
   commit(n);
   // 新手清空：上一手的牌面与底池输入回到默认（对手档案/会话/设置跨手保留）。
-  // oppStack 必须一并重置（审查回环）：potForm 输入时同步 oppStack=myStack，
-  // 漏掉会让 effectiveStack=min(新myStack, 旧oppStack) 残留上一手的脏值
+  // 批次15：结算开（默认）→ 筹码跨手连续，myStack 保留结算后的值；关 → 每手回默认 100。
+  // oppStack 始终与 myStack 同步（potForm 输入时同同步；漏掉会残留 effectiveStack 脏值）
   resetPending();
-  setPatch({ hand: [], board: [], ...FIELD_DEFAULTS, oppStack: FIELD_DEFAULTS.myStack, result: null, strategy: null });
+  const settlementOn = state.settings.settlement !== false; // 旧档无此键视为开
+  const fresh = settlementOn
+    ? { pot: 0, call: 0, oppStack: state.myStack }
+    : { ...FIELD_DEFAULTS, oppStack: FIELD_DEFAULTS.myStack };
+  setPatch({ hand: [], board: [], result: null, strategy: null, ...fresh });
   rerenderAll();
 }
 

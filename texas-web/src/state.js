@@ -2,7 +2,7 @@ const listeners = new Set();
 export const state = {
   hand: [], board: [], playerCount: 6, heroPosition: '', raisesBefore: 0, limpers: 0,
   opponents: [], pot: 0, call: 0, myStack: 100, oppStack: 100,
-  sessionId: '', settings: { simulations: 2000, adviceStyle: 'standard', autoTableAdaptation: true, theme: 'dark' },
+  sessionId: '', settings: { simulations: 2000, adviceStyle: 'standard', autoTableAdaptation: true, theme: 'dark', settlement: true },
   result: null, strategy: null,
 };
 export function setPatch(patch) { Object.assign(state, patch); listeners.forEach(fn => fn(state)); }

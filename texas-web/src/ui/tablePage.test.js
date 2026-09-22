@@ -165,24 +165,31 @@ describe('renderTableInto 内嵌挂载 + nextRound 导出', () => {
 });
 
 // 放在文件末尾：dealerSeat/roundCount 为模块级累积状态，新用例统一放这里（批次14审查建议）
-describe('nextRound 新手清空（批次14，用户反馈）', () => {
-  it('下一轮=新手：清空手牌/公共牌/底池三数字/结果/策略，位置换算照常', () => {
+describe('nextRound 新手清空（批次14/15，用户反馈）', () => {
+  it('结算开（默认）：下一轮保留结算后的后手筹码，只清牌面与底池', () => {
     setPatch({
       hand: ['As', 'Kd'], board: ['Qh', 'Jd', 'Ts'],
-      pot: 30, call: 10, myStack: 80, oppStack: 80, result: { winRate: 0.6 }, strategy: { spr: {} },
+      pot: 30, call: 10, myStack: 130, oppStack: 130,
+      settings: { simulations: 2000, adviceStyle: 'standard', autoTableAdaptation: true, theme: 'dark', settlement: true },
+      result: { winRate: 0.6 }, strategy: { spr: {} },
       playerCount: 6, opponents: [opponentDefaults()], heroPosition: 'BTN',
     });
     nextRound();
-    expect(state.hand).toEqual([]);
-    expect(state.board).toEqual([]);
+    expect(state.myStack).toBe(130); // 筹码跨手连续（批次15）
+    expect(state.oppStack).toBe(130);
     expect(state.pot).toBe(0);
     expect(state.call).toBe(0);
+    expect(state.hand).toEqual([]);
+  });
+  it('结算关：下一轮后手回默认 100（旧行为）', () => {
+    setPatch({
+      hand: ['As', 'Kd'], board: [], pot: 30, call: 10, myStack: 130, oppStack: 130,
+      settings: { simulations: 2000, adviceStyle: 'standard', autoTableAdaptation: true, theme: 'dark', settlement: false },
+      playerCount: 6, opponents: [opponentDefaults()], heroPosition: 'BTN',
+    });
+    nextRound();
     expect(state.myStack).toBe(100);
-    expect(state.oppStack).toBe(100); // 审查回环：不重置会残留 effectiveStack 脏值
-    expect(state.result).toBeNull();
-    expect(state.strategy).toBeNull();
-    // 轮转正确性由上方相对断言用例覆盖；此处只断言仍是 6max 合法位置
-    expect(['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB']).toContain(state.heroPosition);
+    expect(state.oppStack).toBe(100);
   });
   it('对手档案（含观察/标定）与会话跨手保留；对手数按人数补齐', () => {
     const ops = Array.from({ length: 5 }, (_, i) => i
