@@ -43,7 +43,9 @@ export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenH
       del.style.cssText = 'float:right;margin-left:8px;min-height:36px;padding:2px 10px;';
       del.addEventListener('click', e => {
         e.preventDefault(); e.stopPropagation(); // 不展开/收起折叠组
-        if (confirm(`删除会话「${s.name}」及其 ${group.length} 手记录？`)) onDeleteSession(s.id);
+        // 确认文案用未筛选总数（审查 M2）：筛选视图下 group.length 会少报实际删除规模
+        const total = hands.filter(h => (h.sessionId ?? '') === s.id).length;
+        if (confirm(`删除会话「${s.name}」及其全部 ${total} 手记录？`)) onDeleteSession(s.id);
       });
       summary.appendChild(del);
     }

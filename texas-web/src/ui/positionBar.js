@@ -57,8 +57,9 @@ export function renderPositionBar(container, onChange, getValues) {
   };
   const hiFor = () => Math.max(1, playerCount() - 1);
   const renderValues = vals => {
-    wrap.querySelector('#rb-val').textContent = vals?.raisesBefore ?? cur('raisesBefore');
-    wrap.querySelector('#lp-val').textContent = vals?.limpers ?? cur('limpers');
+    // 显示值也 clamp（审查 M1）：人数调小后存量超限值不再误导显示
+    wrap.querySelector('#rb-val').textContent = Math.min(hiFor(), vals?.raisesBefore ?? cur('raisesBefore'));
+    wrap.querySelector('#lp-val').textContent = Math.min(hiFor(), vals?.limpers ?? cur('limpers'));
   };
   renderValues();
 
