@@ -33,6 +33,10 @@ describe('storage', () => {
     expect(settings.adviceStyle).toBe('aggressive');
     expect(settings.autoTableAdaptation).toBe(false);
   });
+  it('buildHandRecord 无画像桌 → tableProfile 存「未标定」而非虚构「均衡」（批次13回环）', () => {
+    const r = buildHandRecord('call', { net: 0 }); // 测试 state 无 strategy.profile
+    expect(r.tableProfile).toBe('未标定');
+  });
   it('deleteSession 删会话+其名下手数，其它会话/手保留（批次11）', () => {
     saveSessions([{ id: 's1', name: 'A' }, { id: 's2', name: 'B' }]);
     saveHands([

@@ -1,7 +1,8 @@
 import { TYPE_DEFAULTS } from './ranges.js';
 
-// 观察充分：看过 ≥20 手且记录过 VPIP（批次13）——观察到的真实 VPIP 优先于类型预设
-const observed = o => o.handsSeen >= 20 && o.vpipObs > 0;
+// 观察充分：看过 ≥20 手且记录过 VPIP（批次13）——观察到的真实 VPIP 优先于类型预设。
+// 用 !=null 而非 >0（审查回环）：观察 N 手全部不入池的 VPIP=0 是最强紧手信号，不能当"没数据"
+const observed = o => o.handsSeen >= 20 && o.vpipObs != null;
 
 export function tableProfile(opponents) {
   if (!opponents || opponents.length < 2) return null;

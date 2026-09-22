@@ -67,7 +67,7 @@ export function buildHandRecord(action, result) {
     inPosition: ['BTN', 'CO', 'MP'].includes(state.heroPosition),
     heroRole: state.raisesBefore > 0 ? 'defender' : 'aggressor',
     opponents: state.opponents.map(o => ({ profileId: o.id, typeSnapshot: o.type, vpipSnapshot: o.vpipObs ?? null })),
-    tableProfile: strategy.profile?.label ?? '均衡',
+    tableProfile: strategy.profile?.label ?? '未标定', // 批次13：无画像桌不再虚构「均衡」结论
     pot: state.pot,
     call: state.call,
     myStack: state.myStack,

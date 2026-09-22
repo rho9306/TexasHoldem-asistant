@@ -33,6 +33,14 @@ describe('tableProfile 未标定对手处理（批次13，用户反馈：默认�
     expect(p.vpipAvg).toBe(58);
     expect(p.aggrAvg).toBe(0);
   });
+  it('观察 VPIP=0 的真紧手不被错杀（审查回环：>0 → !=null）', () => {
+    const p = tableProfile([
+      { type: null, handsSeen: 30, vpipObs: 10 },
+      { type: null, handsSeen: 25, vpipObs: 0 }, // 25手全弃=最强紧手信号
+    ]);
+    expect(p.vpipAvg).toBe(5);
+    expect(p.label).toBe('紧弱桌'); // 紧轴生效
+  });
   it('混合：已标定参与双轴，未标定无观察被排除（不被稀释成别的桌风）', () => {
     const p = tableProfile([
       { type: 'loose-passive' }, { type: 'loose-passive' },
