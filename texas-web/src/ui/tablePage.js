@@ -126,7 +126,7 @@ export function nextRound() {
   const fresh = settlementOn
     ? { pot: 0, call: 0, oppStack: state.myStack }
     : { ...FIELD_DEFAULTS, oppStack: FIELD_DEFAULTS.myStack };
-  setPatch({ hand: [], board: [], result: null, strategy: null, ...fresh });
+  setPatch({ hand: [], board: [], result: null, strategy: null, settled: false, ...fresh });
   rerenderAll();
 }
 

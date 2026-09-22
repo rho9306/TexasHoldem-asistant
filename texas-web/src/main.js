@@ -164,6 +164,14 @@ window.__recordHand = () => {
     }
     return;
   }
+  if (state.settled) { // 审查回环：同一手重复入库会双扣筹码
+    const btn = $('record-hand-btn');
+    if (btn) {
+      btn.textContent = '本手已结算，点「下一轮」开新一手';
+      setTimeout(() => { btn.textContent = '✓ 记录本手到历史'; }, 2000);
+    }
+    return;
+  }
   if (state.settings.settlement !== false) openSettlementDialog();
   else recordWithNet(0);
 };
@@ -208,10 +216,11 @@ function openSettlementDialog() {
   dlg.querySelector('#sd-cancel').addEventListener('click', () => close());
   dlg.querySelector('#sd-ok').addEventListener('click', () => {
     const net = +netInput.value;
-    if (!Number.isFinite(net)) return; // 非法金额不关弹窗，等修正
+    if (netInput.value.trim() === '' || !Number.isFinite(net)) return; // 空/非法金额不关弹窗（审查回环：+''===0 会静默记 0）
     close();
     recordWithNet(net);
   });
+  dlg.addEventListener('close', () => dlg.remove()); // 审查回环：ESC 关闭也清理节点
   function close() { try { dlg.close?.(); } catch { /* ignore */ } dlg.remove(); }
   if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
 }
@@ -232,9 +241,10 @@ function recordWithNet(net) {
       : s);
     saveSessions(list);
   }
-  // 筹码结算（批次15）：后手随盈亏增减（不小于0），oppStack 同步；下一轮带着新筹码开
+  // 筹码结算（批次15）：后手随盈亏增减（不小于0），oppStack 同步；下一轮带着新筹码开。
+  // settled 置位防同一手重复入库双扣筹码（换牌/清牌/下一轮时清除）
   const stack = Math.max(0, state.myStack + net);
-  setPatch({ myStack: stack, oppStack: stack });
+  setPatch({ myStack: stack, oppStack: stack, settled: true });
   refresh(); // 重渲后 potForm 显示新后手；桌面历史栏在 renderCalc 内同步
   // 按钮反馈：短暂变"已记录"后还原（写在重渲后的新 DOM 上）
   const btn = $('record-hand-btn');
@@ -263,7 +273,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   renderCardPicker(add(), {
     slots: 2, usedCards: used, initial: [...state.hand],
     title: '① 我的手牌',
-    onPick: cards => { setPatch({ hand: cards }); refresh(); },
+    onPick: cards => { setPatch({ hand: cards, settled: false }); refresh(); }, // 换牌=新手（批次15 settled 语义）
   });
   // ② 我的位置与翻前场景
   step(root, '② 我的位置与翻前场景');
@@ -311,7 +321,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   renderCardPicker(add(), {
     slots: 5, usedCards: used, initial: [...state.board],
     title: '④ 公共牌（随街补填，翻前可不填）',
-    onPick: cards => { setPatch({ board: cards }); refresh(); },
+    onPick: cards => { setPatch({ board: cards, settled: false }); refresh(); },
   });
   // ⑤ 底池与筹码
   step(root, '⑤ 底池与筹码');
@@ -396,7 +406,7 @@ if (mq) {
 
 // ---- Task 25 键盘快捷键 ----
 window.__confirmCards = () => { confirmPartials(); }; // 刷新由 onPick→setPatch→refresh 驱动，此处不再补刀
-window.__clearCards = () => { resetPending(); setPatch({ hand: [], board: [] }); refresh(); };
+window.__clearCards = () => { resetPending(); setPatch({ hand: [], board: [], settled: false }); refresh(); };
 window.__recalc = () => { if (!confirmPartials()) refresh(); }; // 有半选时先确认（onPick 已驱动刷新），无半选才重算
 
 document.addEventListener('keydown', e => {

@@ -27,12 +27,13 @@ import { getCore } from './wasm/pokerCore.js';
 const flush = () => new Promise(r => setTimeout(r, 0));
 
 beforeEach(() => {
+  localStorage.clear();
   setPatch({
     hand: ['As', 'Kd'], board: [], playerCount: 6, heroPosition: 'BTN',
     raisesBefore: 0, limpers: 0,
     opponents: [opponentDefaults('TAG')],
     pot: 30, call: 10, myStack: 100, oppStack: 100,
-    result: null, strategy: null,
+    result: null, strategy: null, settled: false,
   });
 });
 
@@ -123,5 +124,40 @@ describe('计算页 ③对手档案标题行按钮 + 中栏内嵌牌桌', () => 
       .find(b => b.textContent === '⏭ 下一轮');
     expect(() => next.click()).not.toThrow();
     expect(state.heroPosition).not.toBe(''); // 位置条数据已由 nextRound 落盘
+  });
+});
+
+describe('牌局结算（批次15）', () => {
+  it('结算开：弹窗选赢 → net=+pot 入库、后手增加、settled 置位', async () => {
+    refresh();
+    await flush();
+    setPatch({ settings: { ...state.settings, settlement: true }, settled: false });
+    window.__recordHand();
+    document.querySelector('#settle-dlg [data-o="win"]').click();
+    expect(document.querySelector('#sd-net').value).toBe('30'); // 预填 +底池
+    document.querySelector('#sd-ok').click();
+    const hands = JSON.parse(localStorage.getItem('texas.hands'));
+    expect(hands).toHaveLength(1);
+    expect(hands[0].result.net).toBe(30);
+    expect(state.myStack).toBe(130); // 100 + 30
+    expect(state.settled).toBe(true);
+  });
+  it('已结算后再点记录 → 不重复入库（防双扣筹码）', () => {
+    setPatch({ settled: true });
+    window.__recordHand();
+    expect(JSON.parse(localStorage.getItem('texas.hands') ?? '[]')).toHaveLength(0);
+  });
+  it('结算关闭 → 旧行为直接入库 net=0，不弹窗', () => {
+    setPatch({ settings: { ...state.settings, settlement: false }, settled: false });
+    window.__recordHand();
+    const hands = JSON.parse(localStorage.getItem('texas.hands'));
+    expect(hands).toHaveLength(1);
+    expect(hands[0].result.net).toBe(0);
+    expect(document.querySelector('#settle-dlg')).toBeNull();
+  });
+  it('手牌不足 2 张 → 拒绝记录', () => {
+    setPatch({ hand: ['As'], settled: false });
+    window.__recordHand();
+    expect(JSON.parse(localStorage.getItem('texas.hands') ?? '[]')).toHaveLength(0);
   });
 });
