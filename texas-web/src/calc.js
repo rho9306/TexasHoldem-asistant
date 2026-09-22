@@ -80,7 +80,7 @@ export async function recalc() {
         call: state.call, pot: state.pot, effStack: effectiveStack(), winRate: eff,
         adviceLevel: d.adviceLevel, street: state.board.length,
         heroPosition: state.heroPosition, limpers: state.limpers,
-        adviceStyle: state.settings.adviceStyle,
+        adviceStyle: state.settings.adviceStyle, bb: BIG_BLIND,
       });
       setPatch({ result: { ...r, eff, ...d, action } });
     } finally {

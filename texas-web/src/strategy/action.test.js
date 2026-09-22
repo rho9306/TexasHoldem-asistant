@@ -33,10 +33,19 @@ describe('actionAdvice 面对下注（call>0）', () => {
 });
 
 describe('actionAdvice 无人下注（call=0）', () => {
-  it('翻前强牌 → open 加注 2.5BB+每跛入+1', () => {
+  it('翻前强牌 → open 加注 2.5BB+每跛入1BB（BB=10 用户单位）', () => {
     const a = actionAdvice({ ...base, call: 0, winRate: 0.6, street: 0, limpers: 2 });
     expect(a.action).toBe('raise');
-    expect(a.amount).toBe(4.5); // 2.5+2
+    expect(a.amount).toBe(45); // (2.5+2)×10：金额统一为用户单位
+  });
+  it('bb 参数显式传 1（1单位=1BB 口径）→ 金额按 BB', () => {
+    const a = actionAdvice({ ...base, call: 0, winRate: 0.6, street: 0, limpers: 0, bb: 1 });
+    expect(a.amount).toBe(2.5);
+  });
+  it('翻前边缘牌非盲注位 → 平跟 1BB（=10 用户单位）', () => {
+    const a = actionAdvice({ ...base, call: 0, winRate: 0.45, street: 0 });
+    expect(a.action).toBe('call');
+    expect(a.amount).toBe(10);
   });
   it('翻前弱牌非盲注位 → 弃牌', () => {
     const a = actionAdvice({ ...base, call: 0, winRate: 0.3, street: 0 });
@@ -50,6 +59,11 @@ describe('actionAdvice 无人下注（call=0）', () => {
     const a = actionAdvice({ ...base, call: 0, winRate: 0.7, street: 3 });
     expect(a.action).toBe('bet');
     expect(a.amount).toBeCloseTo(30 * 0.66, 5);
+  });
+  it('翻牌强牌但底池未填（pot=0）→ 过牌并提示补填，不给 0 金额', () => {
+    const a = actionAdvice({ ...base, call: 0, winRate: 0.7, street: 3, pot: 0 });
+    expect(a.action).toBe('check');
+    expect(a.amount).toBeUndefined();
   });
   it('翻牌中等牌力 → 过牌看免费牌', () => {
     const a = actionAdvice({ ...base, call: 0, winRate: 0.45, street: 4 });

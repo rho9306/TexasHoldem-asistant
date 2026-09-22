@@ -36,13 +36,15 @@ export function renderResult(container, result) {
   container.appendChild(el);
 }
 
-/** 建议行：批次10 结构化行动建议（动作+金额+理由）；无 action 数据时回退引擎短句 */
+/** 建议行：批次10 结构化行动建议（动作+金额+理由）；无 action 数据时回退引擎短句。
+ *  需胜率仅面对下注时有意义（call=0 时引擎给 requiredEquity=1 → 隐藏） */
 function adviceLine(result) {
-  const eq = `<span class="num dim">需胜率 ${fmt(result.requiredEquity != null ? result.requiredEquity * 100 : NaN)}%</span>`;
+  const eq = result.requiredEquity != null && result.requiredEquity < 1
+    ? ` <span class="num dim">需胜率 ${(result.requiredEquity * 100).toFixed(1)}%</span>` : '';
   const a = result.action;
-  if (!a) return `建议：<b>${result.advice ?? '--'}</b> ${eq}`;
+  if (!a) return `建议：<b>${result.advice ?? '--'}</b>${eq}`;
   const label = ACTION_LABEL[a.action] ?? a.action;
   const amt = a.amount != null ? ` <span class="num" style="font-size:18px">≈${a.amount}</span>` : '';
   const note = a.amountNote ? ` <span class="dim">（${a.amountNote}）</span>` : '';
-  return `建议：<b style="color:var(--accent)">${label}</b>${amt}${note} ${eq}<br><small class="dim">💡 ${a.reason}</small>`;
+  return `建议：<b style="color:var(--accent)">${label}</b>${amt}${note}${eq}<br><small class="dim">💡 ${a.reason}</small>`;
 }
