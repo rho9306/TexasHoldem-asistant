@@ -55,10 +55,14 @@ describe('renderOpponentCards', () => {
   });
   it('compact 模式（批次12）：不渲染一键预设与＋（手机端加对手走牌桌页），默认模式渲染', () => {
     document.body.innerHTML = '<div id="oc"></div>';
+    let addCalls = 0, presetCalls = 0;
     renderOpponentCards(document.getElementById('oc'),
-      { opponents: [], onEdit() {}, onAdd() {}, onPreset() {}, compact: true });
+      { opponents: [], onEdit() {}, onAdd: () => addCalls++, onPreset: () => presetCalls++, compact: true });
     expect(document.querySelector('#opp-add')).toBeNull();
     expect(document.querySelector('#opp-preset')).toBeNull();
+    document.querySelector('#oc .card').click(); // 点卡片区域也不应触发被移除的回调
+    expect(addCalls).toBe(0);
+    expect(presetCalls).toBe(0);
     renderOpponentCards(document.getElementById('oc'), { opponents: [], onEdit() {}, onAdd() {}, onPreset() {} });
     expect(document.querySelector('#opp-add')).toBeTruthy();
     expect(document.querySelector('#opp-preset')).toBeTruthy();

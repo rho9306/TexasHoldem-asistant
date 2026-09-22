@@ -46,6 +46,7 @@ select, input[type="checkbox"] { min-height: 44px; }
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text);
 }
+.scenarios { flex-wrap: wrap; }   /* 按钮 44px 后窄屏（≤375px）放不下两个 label，允许换行 */
 
 /* ---- Batch B：全屏浮层（牌桌页 / 桌面端 GTO图 / 设置 共用 overlay 模式）---- */
 .fs-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; display: flex; flex-direction: column; }
