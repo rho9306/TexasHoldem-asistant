@@ -9,6 +9,7 @@ import { saveOpponents } from '../storage.js';
 import { opponentDefaults, TYPE_LABEL, typeLabel } from './opponentCards.js';
 import { positionsFor } from './positionBar.js';
 import { resetPending } from './cardPicker.js';
+import { FIELD_DEFAULTS } from './potForm.js';
 
 /**
  * 英雄位置推算（纯函数，供单测）。
@@ -117,9 +118,11 @@ export function nextRound() {
   dealerSeat = (dealerSeat + 1) % n;
   roundCount += 1;
   commit(n);
-  // 新手清空：上一手的牌面与底池输入回到默认（对手档案/会话/设置跨手保留）
+  // 新手清空：上一手的牌面与底池输入回到默认（对手档案/会话/设置跨手保留）。
+  // oppStack 必须一并重置（审查回环）：potForm 输入时同步 oppStack=myStack，
+  // 漏掉会让 effectiveStack=min(新myStack, 旧oppStack) 残留上一手的脏值
   resetPending();
-  setPatch({ hand: [], board: [], pot: 0, call: 0, myStack: 100, result: null, strategy: null });
+  setPatch({ hand: [], board: [], ...FIELD_DEFAULTS, oppStack: FIELD_DEFAULTS.myStack, result: null, strategy: null });
   rerenderAll();
 }
 

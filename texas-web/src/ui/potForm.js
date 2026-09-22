@@ -10,7 +10,8 @@ const CALL_PRESETS = [
 ];
 
 // 空 = 使用默认值（用户清空输入框即回到默认，免去删除预填数字的步骤）
-const FIELD_DEFAULTS = { pot: 0, call: 0, myStack: 100 };
+// 导出供 tablePage.nextRound 新手清空复用（单一默认值来源，批次14）
+export const FIELD_DEFAULTS = { pot: 0, call: 0, myStack: 100 };
 const FIELD_PLACEHOLDER = { pot: '默认 0', call: '默认 0', myStack: '默认 100' };
 
 export function renderPotForm(container, onChange) {
