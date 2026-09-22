@@ -7,6 +7,7 @@ import { mdfAlpha, detectOuts } from './strategy/mdf.js';
 import { cBetSuggestion, sprInfo } from './strategy/sizing.js';
 import { impliedOdds } from './strategy/implied.js';
 import { tableProfile, adjustAdvice } from './strategy/tableDynamics.js';
+import { actionAdvice } from './strategy/action.js';
 import { percentile } from './strategy/rankTable.js';
 import { handClassFor, getPreflopChart } from './strategy/charts.js';
 
@@ -74,7 +75,14 @@ export async function recalc() {
       const eff = r.winRate + r.tieRate * 0.5;
       d = core.evaluateDecision(eff, state.pot, state.call,
         state.pot * 0.5 + state.call, state.settings.adviceStyle);
-      setPatch({ result: { ...r, eff, ...d } });
+      // 批次10：行动建议（check/跟/加/弃 + 加注金额），数学同上、规则在 JS 策略层
+      const action = actionAdvice({
+        call: state.call, pot: state.pot, effStack: effectiveStack(), winRate: eff,
+        adviceLevel: d.adviceLevel, street: state.board.length,
+        heroPosition: state.heroPosition, limpers: state.limpers,
+        adviceStyle: state.settings.adviceStyle,
+      });
+      setPatch({ result: { ...r, eff, ...d, action } });
     } finally {
       handVec.delete(); boardVec.delete(); oppVec.delete();
     }

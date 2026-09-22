@@ -1,4 +1,6 @@
 // 结果仪表盘：WIN RATE 大数字 + 优势进度条 + EV双卡 + 建议横幅（含错误态/未输入引导态）
+// 批次10：横幅升级为结构化行动建议（动作+金额+理由，来自 strategy/action.js）
+import { ACTION_LABEL } from '../strategy/action.js';
 const fmt = (v, digits = 1) => (typeof v === 'number' && isFinite(v) ? v.toFixed(digits) : '--');
 
 export function renderResult(container, result) {
@@ -29,7 +31,18 @@ export function renderResult(container, result) {
       <div class="card" style="flex:1">加注EV<div class="num">${fmt(result.evRaise)}</div></div>
     </div>
     <div style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
-      建议：<b>${result.advice ?? '--'}</b> <span class="num dim">需胜率 ${fmt(result.requiredEquity != null ? result.requiredEquity * 100 : NaN)}%</span>
+      ${adviceLine(result)}
     </div>`;
   container.appendChild(el);
+}
+
+/** 建议行：批次10 结构化行动建议（动作+金额+理由）；无 action 数据时回退引擎短句 */
+function adviceLine(result) {
+  const eq = `<span class="num dim">需胜率 ${fmt(result.requiredEquity != null ? result.requiredEquity * 100 : NaN)}%</span>`;
+  const a = result.action;
+  if (!a) return `建议：<b>${result.advice ?? '--'}</b> ${eq}`;
+  const label = ACTION_LABEL[a.action] ?? a.action;
+  const amt = a.amount != null ? ` <span class="num" style="font-size:18px">≈${a.amount}</span>` : '';
+  const note = a.amountNote ? ` <span class="dim">（${a.amountNote}）</span>` : '';
+  return `建议：<b style="color:var(--accent)">${label}</b>${amt}${note} ${eq}<br><small class="dim">💡 ${a.reason}</small>`;
 }
