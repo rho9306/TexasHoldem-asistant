@@ -13,7 +13,7 @@ export function renderSettingsPage(container, { onExport, onImport, onClear }) {
       <span class="dim">根据全桌风格自动调整打法建议（不影响胜率数学）</span>`);
   mk('数据', `<button id="s-export">导出 JSON 备份</button> <button id="s-import">导入 JSON</button>
       <input type="file" id="s-file" accept=".json" style="display:none"/> <button id="s-clear" class="btn-danger">清空历史</button>`);
-  mk('关于', `<p class="dim">德扑助手 v4.0（批次12 · 2026-09-22）— 面向学习与训练的工具，帮助你理解胜率、EV、底池赔率与GTO概念。
+  mk('关于', `<p class="dim">德扑助手 v4.0（批次13 · 2026-09-22）— 面向学习与训练的工具，帮助你理解胜率、EV、底池赔率与GTO概念。
       不承诺盈利。图表为公开共识简化版。请理性游戏。</p>`);
   container.querySelector('#s-sim').addEventListener('change', e => { setPatch({ settings: { ...state.settings, simulations: +e.target.value } }); saveSettings(state.settings); });
   container.querySelector('#s-style').addEventListener('change', e => { setPatch({ settings: { ...state.settings, adviceStyle: e.target.value } }); saveSettings(state.settings); });
