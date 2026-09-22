@@ -2,8 +2,8 @@
 
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
-**最后更新：** 2026-09-22（第六轮·批次 10 行动建议（check/金额）完成，127 测试全绿；**用户已授权：以后每批次做完直接推送**，推送遇 github.com 间歇不通时退避重试即可）
-**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-10。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）
+**最后更新：** 2026-09-22（第六轮·批次 11 删除会话/人数上限/SW缓存击穿修复完成，132 测试全绿；**用户已授权：以后每批次做完直接推送**，推送遇 github.com 间歇不通时退避重试即可）
+**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-11。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）
 
 ---
 
@@ -334,6 +334,7 @@ Texas/
 | 8 | **存量对手迁移**（用户实测报告：批次7后页面既有对手仍显示紧凶）：storage.js `migrateOpponentDefaults(force)` 存量 TAG→null 一次性迁移（texas.migrations 第5键标记防重跑，空列表也写标记防误迁一键预设）；importAll 绕过修复（审查 Important→回环）：exportAll 给备份打 oppDefaultsV2 标记、旧备份导入即强制迁移、新备份尊重主动标注；SW CACHE v2→v3 | **9bd8368 + 475db10** | ✅ Approved（审查者核实幂等/时序/测试隔离；Important 1条已回环修复） | **110/110** |
 | 9 | **引擎加载修复**（用户实测报告：选手牌即「加载计算引擎失败」）：**根因=部署站从未成功加载过引擎**——emscripten 胶水运行时按 scriptDirectory 拼 wasm 路径，vite 静态分析看不到，dist 从未包含 .wasm（线上实测 404）；dev 正常掩盖了问题。修复=pokerCore.js `?url` 引入 wasm + locateFile 显式传入，vite 发出带 hash 的 wasm 资产 | **e0d128b** | ✅ 控制器自审：111/111 测试（含新增加载器回归测试）、dist 含 wasm、vite preview 端到端 200/application/wasm | **111/111** |
 | 10 | **行动建议升级**（用户需求：轮到我时给 check/跟/加/弃 + 加注金额）：新 `strategy/action.js` 纯函数——面对下注转译引擎档位（加注至=2×call+pot≡3×下注+前池，超有效筹码→全压）；**补齐 check 语义**（call=0 翻前 open 2.5BB+跛入、盲注位免费过牌；翻后胜率分档 66%/50%池/过牌）；风格偏置±0.03；结果横幅升级为动作+金额+理由。审查回环：翻前金额统一用户单位（bb=10）、pot 未填不下注 0、需胜率仅面对下注显示 | **989a96c + 9f00f7d** | ✅ Approved（数学等价推导核验；Important 1条已回环） | **127/127** |
+| 11 | **删除会话+人数上限+SW缓存击穿**（用户三反馈）：①历史页会话组「🗑 删除」（storage.deleteSession 删会话+名下手数；当前会话引用清理+顶栏同步；未分组桶不可删）②加注/平跟上限=人数-1（原硬编码 2/3）③**SW 导航 fetch 加 `cache:'no-cache'`**——根因链：Pages index.html max-age=600 → 浏览器 HTTP 缓存喂给 SW 陈旧 index.html → 旧 hash 入口被静态资源缓存优先命中 → 用户停留旧版（批次10 横幅"看不见"的原因）；CACHE v4；设置页关于加构建标记 | **31c27ba + 8fa150c** | ✅ Approved（0 阻塞；6 Minor 留档，2 条当场回环：显示 clamp+删除计数用未筛选总数） | **132/132** |
 
 期间文档提交：1365cf4（使用说明产出）、2827444、8f1dacc、9cf64d2（各批次说明同步）。
 
@@ -348,6 +349,7 @@ Texas/
 - **存量对手迁移（批次8）**：迁移语义=「只抹旧代码自动写的 TAG，尊重用户之后主动标的」——一次性（texas.migrations 标记）+ 随备份走（exportAll 打 oppDefaultsV2 标记，importAll 仅对无标记旧备份强制迁移）；数学零影响（TYPE_DEFAULTS[null] ?? TAG 同对象兜底）。**后续新迁移须追加标记键，不得整体覆盖 texas.migrations**
 - **WASM 加载链（批次9）**：src/wasm/poker_core.js+wasm 为 em++ 产物（`npm run build:wasm`，一次性构建后入库，Actions 无需 emsdk）；pokerCore.js 用 `?url` 引入 wasm 并以 `locateFile` 传给胶水——**改引擎重编译后无需额外接线**（文件名不变，vite 自动发新 hash）。回归教训：凡「dev 正常、部署异常」先查产物资源是否齐全（`ls dist/assets/*.wasm`）
 - **行动建议（批次10）**：`actionAdvice` 输入 `bb`（用户单位/1BB，与 calc.js BIG_BLIND=10 联动）——**金额一律用户单位**，BB 口径只出现在 amountNote 文案；面对下注的加注至=2×call+pot（pot 已含对方下注）；action.js 偏置 0.03 与引擎 0.02 不同是有意设计（分档更粗），勿「统一」；call=0 时引擎 requiredEquity=1，UI 以 `<1` 判定显示需胜率。留档 Minor：c-bet 卡（纹理口径）与横幅（胜率口径）可能同屏口径并存、effStack=0 显示怪异、翻前平跟恒 1BB
+- **SW 缓存策略 v2（批次11）**：导航 `cache:'no-cache'` 击穿浏览器 HTTP 缓存（Pages max-age=600 的陈旧 index.html 曾把用户钉在旧版）+ 每次发布升 CACHE 版本 + 设置页关于行手更构建标记（批次N·日期）——**「用户说看不到新功能」先让他看设置页关于的批次号**；sw.js 自身更新仍可能延迟 ≤10 分钟（Pages 对 sw.js 同样 max-age=600，留观察项）。批次11 留档 Minor：空手数会话无删除入口（不渲染）、删除按钮 36px、confirm 纯文本无需转义、版本标记每批次手更
 
 ### 10.3 ✅ 暂停已解除——恢复步骤执行完毕（2026-09-22）
 
