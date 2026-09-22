@@ -2,8 +2,8 @@
 
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
-**最后更新：** 2026-09-22（第六轮·批次 8 存量对手迁移完成：修复批次 7 遗漏——localStorage 存量 type:'TAG' 一次性迁移为「默认」，含 importAll 旧备份强迁移回环；审查 Approved；110 vitest 全绿；**待推送**）
-**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-7 已上线，**批次 8 本地待推送**。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）
+**最后更新：** 2026-09-22（第六轮·批次 8 存量对手迁移 + 批次 9 引擎加载修复完成，110→111 测试全绿；**用户已授权：以后每批次做完直接推送**，推送遇 github.com 间歇不通时退避重试即可）
+**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-9。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）
 
 ---
 
@@ -332,6 +332,7 @@ Texas/
 | 6 | Batch C：牌桌**内嵌桌面中栏底部**（renderTableInto 提取复用）；手机③标题行 **「🪑 牌桌」+「⏭ 下一轮」** 直达按钮（三入口共享模块级 dealer 状态）；顺手修 mounted 列表缓慢泄漏（pruneMounted 入口剪枝，9b12c00） | 80ef62f + 9b12c00 | ✅ Approved（三入口一致性/无死循环/菜单滚动裁剪核查） | 101/101 |
 | 7 | **Polish：底池输入默认空**（空=默认值 0/0/100，placeholder 提示）+ **对手默认「默认」未标定**（type:null 灰徽章，数学与原 TAG 逐值一致——审查者三路推演：掩码同对象兜底/桌画像/implied 二级兜底） | **da81b4b** | ✅ Approved（数学等价性为最高优先核验项） | **105/105** |
 | 8 | **存量对手迁移**（用户实测报告：批次7后页面既有对手仍显示紧凶）：storage.js `migrateOpponentDefaults(force)` 存量 TAG→null 一次性迁移（texas.migrations 第5键标记防重跑，空列表也写标记防误迁一键预设）；importAll 绕过修复（审查 Important→回环）：exportAll 给备份打 oppDefaultsV2 标记、旧备份导入即强制迁移、新备份尊重主动标注；SW CACHE v2→v3 | **9bd8368 + 475db10** | ✅ Approved（审查者核实幂等/时序/测试隔离；Important 1条已回环修复） | **110/110** |
+| 9 | **引擎加载修复**（用户实测报告：选手牌即「加载计算引擎失败」）：**根因=部署站从未成功加载过引擎**——emscripten 胶水运行时按 scriptDirectory 拼 wasm 路径，vite 静态分析看不到，dist 从未包含 .wasm（线上实测 404）；dev 正常掩盖了问题。修复=pokerCore.js `?url` 引入 wasm + locateFile 显式传入，vite 发出带 hash 的 wasm 资产 | **e0d128b** | ✅ 控制器自审：111/111 测试（含新增加载器回归测试）、dist 含 wasm、vite preview 端到端 200/application/wasm | **111/111** |
 
 期间文档提交：1365cf4（使用说明产出）、2827444、8f1dacc、9cf64d2（各批次说明同步）。
 
@@ -344,6 +345,7 @@ Texas/
 - **桌面端**：三栏 `1.1fr 1.5fr 1fr`（输入/结果+策略/历史），中栏底部内嵌牌桌（aspect-ratio 自适应）；顶栏「GTO图」「设置」全屏浮层（openFullScreen 共享 helper，.fs-overlay 类同时是键盘守卫标记）
 - **SW 更新策略**（public/sw.js，CACHE='texas-web-v3'）：页面导航**网络优先**（部署后刷新即见新版），静态资源（hash 文件名）缓存优先，离线回退 index.html——**每次发布改内容仍应升版 CACHE**（触发旧缓存清理）
 - **存量对手迁移（批次8）**：迁移语义=「只抹旧代码自动写的 TAG，尊重用户之后主动标的」——一次性（texas.migrations 标记）+ 随备份走（exportAll 打 oppDefaultsV2 标记，importAll 仅对无标记旧备份强制迁移）；数学零影响（TYPE_DEFAULTS[null] ?? TAG 同对象兜底）。**后续新迁移须追加标记键，不得整体覆盖 texas.migrations**
+- **WASM 加载链（批次9）**：src/wasm/poker_core.js+wasm 为 em++ 产物（`npm run build:wasm`，一次性构建后入库，Actions 无需 emsdk）；pokerCore.js 用 `?url` 引入 wasm 并以 `locateFile` 传给胶水——**改引擎重编译后无需额外接线**（文件名不变，vite 自动发新 hash）。回归教训：凡「dev 正常、部署异常」先查产物资源是否齐全（`ls dist/assets/*.wasm`）
 
 ### 10.3 ✅ 暂停已解除——恢复步骤执行完毕（2026-09-22）
 
