@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents, saveSettings } from './storage.js';
+import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents, saveSettings, migrateOpponentDefaults } from './storage.js';
 
 describe('storage', () => {
   beforeEach(() => localStorage.clear());
@@ -39,5 +39,35 @@ describe('storage', () => {
     expect(all.hands).toEqual([]);
     expect(all.opponents).toEqual([]);
     expect(all.settings).toBeNull();
+  });
+});
+
+describe('migrateOpponentDefaults（批次7收尾：存量TAG改「默认」）', () => {
+  beforeEach(() => localStorage.clear());
+  it('存量 TAG 一次性迁移为 null，其它类型与键不动', () => {
+    saveOpponents([
+      { id: 'o1', type: 'TAG', handsSeen: 5 },
+      { id: 'o2', type: 'LAG' },
+      { id: 'o3', type: null },
+    ]);
+    migrateOpponentDefaults();
+    const { opponents } = loadAll();
+    expect(opponents.find(o => o.id === 'o1')).toMatchObject({ type: null, handsSeen: 5 }); // 只改 type
+    expect(opponents.find(o => o.id === 'o2').type).toBe('LAG');
+    expect(opponents.find(o => o.id === 'o3').type).toBeNull();
+  });
+  it('迁移标记防重复：之后主动标的 TAG 不再被抹', () => {
+    saveOpponents([{ id: 'o1', type: 'TAG' }]);
+    migrateOpponentDefaults();
+    expect(loadAll().opponents[0].type).toBeNull();
+    saveOpponents([{ id: 'o1', type: 'TAG' }]); // 用户事后在抽屉/一键预设主动标紧凶
+    migrateOpponentDefaults();
+    expect(loadAll().opponents[0].type).toBe('TAG'); // 有标记，不再抹
+  });
+  it('空对手列表也写标记（防止之后的一键预设TAG被误迁）', () => {
+    migrateOpponentDefaults(); // 首次访问，无对手
+    saveOpponents([{ id: 'o1', type: 'TAG' }]); // 之后主动预设
+    migrateOpponentDefaults();
+    expect(loadAll().opponents[0].type).toBe('TAG');
   });
 });

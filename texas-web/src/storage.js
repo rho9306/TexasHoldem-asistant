@@ -1,9 +1,9 @@
-// 数据层：localStorage 四键持久化（Task 22）
-// 键：texas.sessions / texas.hands / texas.opponents / texas.settings
+// 数据层：localStorage 五键持久化（Task 22 四键 + texas.migrations 一次性迁移标记）
+// 键：texas.sessions / texas.hands / texas.opponents / texas.settings / texas.migrations
 // 降级：localStorage 不可用（隐私模式/已满）→ 仅内存 + console.warn，不抛错
 import { state } from './state.js';
 
-const K = { sessions: 'texas.sessions', hands: 'texas.hands', opponents: 'texas.opponents', settings: 'texas.settings' };
+const K = { sessions: 'texas.sessions', hands: 'texas.hands', opponents: 'texas.opponents', settings: 'texas.settings', migrations: 'texas.migrations' };
 
 function read(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
@@ -24,6 +24,17 @@ export function loadAll() {
     opponents: read(K.opponents, []),
     settings: read(K.settings, null),
   };
+}
+
+/** 一次性迁移（批次7收尾，2026-09-22）：da81b4b 之前的存量对手由旧默认写成 type:'TAG'（非用户主动标注），
+ *  按「默认未标定」设计改写为 type:null「默认」——数学层 TYPE_DEFAULTS[null] ?? TAG 同对象兜底，胜率不变。
+ *  texas.migrations 标记保证只跑一次：之后用户在抽屉/一键预设主动标的 TAG 不再被抹。空列表也写标记，
+ *  防止新用户之后的一键预设被误迁。须在启动 loadAll 回填之前调用。 */
+export function migrateOpponentDefaults() {
+  if (read(K.migrations, null)?.oppDefaultsV2) return;
+  const list = read(K.opponents, []);
+  write(K.opponents, list.map(o => o.type === 'TAG' ? { ...o, type: null } : o));
+  write(K.migrations, { oppDefaultsV2: true });
 }
 
 /** 新建会话并写入存储，返回 session 对象 */

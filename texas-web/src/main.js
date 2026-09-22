@@ -16,7 +16,7 @@ import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
-import { buildHandRecord, loadAll, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
+import { buildHandRecord, loadAll, migrateOpponentDefaults, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
 import { exportAll, importAll } from './exporter.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
@@ -429,6 +429,7 @@ export function openOpponentDrawer(o) {
 }
 
 // 启动回填：localStorage 已存设置/对手 → 与默认值浅合并（防旧档缺新键），在首次 refresh 之前
+migrateOpponentDefaults(); // 批次7收尾：存量 type:'TAG'（旧默认）一次性改「默认」，须在 loadAll 之前
 const saved = loadAll();
 if (saved.settings) setPatch({ settings: { ...state.settings, ...saved.settings } });
 if (saved.opponents?.length) setPatch({ opponents: saved.opponents });
