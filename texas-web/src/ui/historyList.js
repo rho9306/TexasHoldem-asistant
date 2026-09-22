@@ -7,7 +7,7 @@ import { esc } from './dom.js';
 export const isDeviated = h => h.followedAdvice === false;
 export const isLoss = h => (h.result?.net ?? 0) < 0;
 
-export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenHand }) {
+export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenHand, onDeleteSession }) {
   const { hands, sessions } = loadAll();
   container.innerHTML = '';
   // 顶部统计：累计盈亏
@@ -37,6 +37,16 @@ export function renderHistoryPage(container, { filter = 'all', onFilter, onOpenH
     const summary = document.createElement('summary');
     summary.innerHTML = `<b></b> · ${esc(s.date)} · ${group.length}手`;
     summary.querySelector('b').textContent = s.name; // 会话名为用户输入，textContent 防注入
+    if (s.id && onDeleteSession) { // 删除会话（批次11）；「未分组」是兜底桶不可删
+      const del = document.createElement('button');
+      del.textContent = '🗑 删除';
+      del.style.cssText = 'float:right;margin-left:8px;min-height:36px;padding:2px 10px;';
+      del.addEventListener('click', e => {
+        e.preventDefault(); e.stopPropagation(); // 不展开/收起折叠组
+        if (confirm(`删除会话「${s.name}」及其 ${group.length} 手记录？`)) onDeleteSession(s.id);
+      });
+      summary.appendChild(del);
+    }
     det.appendChild(summary);
     for (const h of group) {
       const item = document.createElement('button');

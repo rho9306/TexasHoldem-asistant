@@ -16,7 +16,7 @@ import { renderTabbar, switchPage as baseSwitchPage } from './ui/tabs.js';
 import { renderChartPage } from './ui/chartViewer.js';
 import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
-import { buildHandRecord, loadAll, migrateOpponentDefaults, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
+import { buildHandRecord, deleteSession, loadAll, migrateOpponentDefaults, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
 import { exportAll, importAll } from './exporter.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
@@ -52,7 +52,17 @@ function renderDesktopHistory() {
     filter: historyFilter,
     onFilter: f => { historyFilter = f; renderDesktopHistory(); },
     onOpenHand: h => openReviewDialog(h),
+    onDeleteSession: id => onDeleteSessionWire(id),
   });
+}
+
+/** 删除会话（批次11）：删数据 → 当前会话引用清理 → 顶栏会话条与历史区重渲 */
+function onDeleteSessionWire(id) {
+  deleteSession(id);
+  if (state.sessionId === id) setPatch({ sessionId: '', sessionName: '' });
+  renderSessionBar($('session-bar'));
+  if (desktop) renderDesktopHistory();
+  else switchPage('history');
 }
 
 /** 桌面信息条：街 · 人数 · 对手数 · 画像 · 快捷键可用 */
@@ -132,6 +142,7 @@ function switchPage(id) {
     filter: historyFilter,
     onFilter: f => { historyFilter = f; switchPage('history'); },
     onOpenHand: h => openReviewDialog(h),
+    onDeleteSession: id => onDeleteSessionWire(id),
   });
   if (id === 'settings') renderSettingsPage($('page-settings'), settingsHandlers());
 }

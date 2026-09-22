@@ -49,9 +49,26 @@ describe('renderPositionBar', () => {
       x => calls.push(x),
       () => vals
     );
-    document.querySelector('.stp[data-k="raisesBefore"][data-d="1"]').click();
-    expect(calls.at(-1)).toEqual({ raisesBefore: 2 }); // clamp 到上限
     document.querySelector('.stp[data-k="limpers"][data-d="-1"]').click();
     expect(calls.at(-1)).toEqual({ limpers: 0 });
+  });
+  it('上限跟随人数（批次11）：无 playerCount 默认6人 → 上限5', () => {
+    document.body.innerHTML = '<div id="pb"></div>';
+    const calls = [];
+    const vals = { raisesBefore: 5, limpers: 0 };
+    renderPositionBar(document.getElementById('pb'), x => calls.push(x), () => vals);
+    document.querySelector('.stp[data-k="raisesBefore"][data-d="1"]').click();
+    expect(calls.at(-1)).toEqual({ raisesBefore: 5 }); // clamp 到 6-1
+  });
+  it('9人桌加注/平跟都可加到8，2人桌上限1', () => {
+    document.body.innerHTML = '<div id="pb"></div>';
+    const calls = [];
+    let pc = 9;
+    renderPositionBar(document.getElementById('pb'), x => calls.push(x), () => ({ raisesBefore: 7, limpers: 0, playerCount: pc }));
+    document.querySelector('.stp[data-k="raisesBefore"][data-d="1"]').click();
+    expect(calls.at(-1)).toEqual({ raisesBefore: 8 }); // 9-1
+    pc = 2;
+    document.querySelector('.stp[data-k="limpers"][data-d="1"]').click();
+    expect(calls.at(-1)).toEqual({ limpers: 1 }); // 2-1
   });
 });

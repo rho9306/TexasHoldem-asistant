@@ -97,6 +97,13 @@ export function buildHandRecord(action, result) {
   function streetName(n) { return n <= 2 ? 'preflop' : n === 3 ? 'flop' : n === 4 ? 'turn' : 'river'; }
 }
 
+/** 删除会话及其名下全部手数（批次11，历史页「删除会话」） */
+export function deleteSession(sessionId) {
+  const { sessions, hands } = loadAll();
+  saveSessions(sessions.filter(s => s.id !== sessionId));
+  saveHands(hands.filter(h => (h.sessionId ?? '') !== sessionId));
+}
+
 /** 对手观察值更新：handsSeen+1，滚动 VPIP = 累计入池次数 / 手数（百分比取整） */
 export function updateOpponentObservation(oppId, sawVpip) {
   const list = loadAll().opponents.map(o => {

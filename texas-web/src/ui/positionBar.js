@@ -48,8 +48,14 @@ export function renderPositionBar(container, onChange, getValues) {
     }
   };
 
-  const limits = { raisesBefore: [0, 2], limpers: [0, 3] };
   const cur = k => (getValues?.() ?? {})[k] ?? 0;
+  // 上限跟随实际人数（批次11，用户反馈：2/3 封顶不合理）：除英雄外全员 = playerCount-1；
+  // getValues 未带 playerCount 时按默认 6 人桌（min 2 max 9）
+  const playerCount = () => {
+    const n = +(getValues?.() ?? {}).playerCount;
+    return Number.isFinite(n) ? Math.min(9, Math.max(2, Math.round(n))) : 6;
+  };
+  const hiFor = () => Math.max(1, playerCount() - 1);
   const renderValues = vals => {
     wrap.querySelector('#rb-val').textContent = vals?.raisesBefore ?? cur('raisesBefore');
     wrap.querySelector('#lp-val').textContent = vals?.limpers ?? cur('limpers');
@@ -60,8 +66,7 @@ export function renderPositionBar(container, onChange, getValues) {
     const b = e.target.closest('.stp');
     if (!b) return;
     const k = b.dataset.k, d = +b.dataset.d;
-    const [lo, hi] = limits[k];
-    onChange({ [k]: Math.min(hi, Math.max(lo, cur(k) + d)) });
+    onChange({ [k]: Math.min(hiFor(), Math.max(0, cur(k) + d)) });
   });
 
   return { renderChips, renderValues };

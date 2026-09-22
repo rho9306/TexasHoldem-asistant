@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents, saveSettings, migrateOpponentDefaults } from './storage.js';
+import { saveHands, loadAll, buildHandRecord, updateOpponentObservation, saveOpponents, saveSettings, saveSessions, deleteSession, migrateOpponentDefaults } from './storage.js';
 
 describe('storage', () => {
   beforeEach(() => localStorage.clear());
@@ -32,6 +32,17 @@ describe('storage', () => {
     expect(settings.simulations).toBe(5000);
     expect(settings.adviceStyle).toBe('aggressive');
     expect(settings.autoTableAdaptation).toBe(false);
+  });
+  it('deleteSession 删会话+其名下手数，其它会话/手保留（批次11）', () => {
+    saveSessions([{ id: 's1', name: 'A' }, { id: 's2', name: 'B' }]);
+    saveHands([
+      { id: 'h1', sessionId: 's1' }, { id: 'h2', sessionId: 's1' },
+      { id: 'h3', sessionId: 's2' }, { id: 'h4', sessionId: '' },
+    ]);
+    deleteSession('s1');
+    const { sessions, hands } = loadAll();
+    expect(sessions.map(s => s.id)).toEqual(['s2']);
+    expect(hands.map(h => h.id)).toEqual(['h3', 'h4']); // s1 的手全删，s2 与未分组保留
   });
   it('loadAll 在存储为空时返回兜底值', () => {
     const all = loadAll();
