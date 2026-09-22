@@ -217,6 +217,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   tableBtn.addEventListener('click', () => openTablePage({
     onEditOpponent: o => openOpponentDrawer(o), // 抽屉是 <dialog> 顶层弹出，不受浮层 z-index 影响
     onBack: () => refresh(), // 返回牌局：按牌桌页改动重绘计算页
+    onAfterNext: () => refresh(), // 浮层内「开始下一轮」= 新手（已清空输入），立即重绘计算页
   }));
   if (split) tableBtn.style.display = 'none'; // 桌面模式：中栏已有内嵌表格，隐藏浮层入口
   const nextRoundBtn = document.createElement('button');
@@ -265,7 +266,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
     const tableEl = document.createElement('div');
     tableEl.className = 'table-inline';
     out.appendChild(tableEl);
-    renderTableInto(tableEl, { onEditOpponent: o => openOpponentDrawer(o) });
+    renderTableInto(tableEl, { onEditOpponent: o => openOpponentDrawer(o), onAfterNext: () => refresh() }); // 内嵌下一轮=新手，同步刷新结果区
   }
   // 记录本手（Task 22 接线 window.__recordHand）——保持在最后（桌面也在中栏策略之后，与手机顺序一致）
   const rec = document.createElement('button');

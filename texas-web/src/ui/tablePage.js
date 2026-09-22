@@ -8,6 +8,7 @@ import { state, setPatch } from '../state.js';
 import { saveOpponents } from '../storage.js';
 import { opponentDefaults, TYPE_LABEL, typeLabel } from './opponentCards.js';
 import { positionsFor } from './positionBar.js';
+import { resetPending } from './cardPicker.js';
 
 /**
  * 英雄位置推算（纯函数，供单测）。
@@ -107,7 +108,7 @@ function rerenderAll() {
 
 /**
  * 「开始下一轮」唯一实现：庄家位顺时针轮转一位 → 英雄位置重算并落盘 → 轮次+1 →
- * 重渲所有已挂载的表格视图（内嵌/浮层同步）。
+ * **新手清空**（批次14，用户反馈：下一轮=新一手）→ 重渲所有已挂载的表格视图。
  * 导出供 main.js 手机端「⏭ 下一轮」按钮直调（不开浮层，调用点自行 refresh 计算页位置条）。
  */
 export function nextRound() {
@@ -116,6 +117,9 @@ export function nextRound() {
   dealerSeat = (dealerSeat + 1) % n;
   roundCount += 1;
   commit(n);
+  // 新手清空：上一手的牌面与底池输入回到默认（对手档案/会话/设置跨手保留）
+  resetPending();
+  setPatch({ hand: [], board: [], pot: 0, call: 0, myStack: 100, result: null, strategy: null });
   rerenderAll();
 }
 
@@ -255,8 +259,9 @@ export function renderTableInto(container, handlers = {}) {
     }
   };
 
-  // 开始下一轮：统一走 nextRound()（庄家轮转+落盘+所有已挂载视图同步重渲）
-  nextBtn.addEventListener('click', () => nextRound());
+  // 开始下一轮：统一走 nextRound()（庄家轮转+新手清空+所有已挂载视图同步重渲）；
+  // onAfterNext 供调用方刷新计算页（结果区需随清空重渲，内嵌/浮层自身不重渲计算页）
+  nextBtn.addEventListener('click', () => { nextRound(); handlers.onAfterNext?.(); });
 
   render();
   mounted.push({ container, render });
@@ -270,7 +275,7 @@ export function renderTableInto(container, handlers = {}) {
  */
 export function openTablePage(handlers = {}) {
   return openFullScreen('🪑 牌桌', (body) => {
-    renderTableInto(body, { onEditOpponent: handlers.onEditOpponent });
+    renderTableInto(body, { onEditOpponent: handlers.onEditOpponent, onAfterNext: handlers.onAfterNext });
     // 返回牌局：刷新计算页（期间 state 已被多次 setPatch）
     body.closest('.fs-overlay')?.querySelector('.fs-back')?.addEventListener('click', () => handlers.onBack?.());
   });
