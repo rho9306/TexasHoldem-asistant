@@ -29,9 +29,11 @@ export function loadAll() {
 /** 一次性迁移（批次7收尾，2026-09-22）：da81b4b 之前的存量对手由旧默认写成 type:'TAG'（非用户主动标注），
  *  按「默认未标定」设计改写为 type:null「默认」——数学层 TYPE_DEFAULTS[null] ?? TAG 同对象兜底，胜率不变。
  *  texas.migrations 标记保证只跑一次：之后用户在抽屉/一键预设主动标的 TAG 不再被抹。空列表也写标记，
- *  防止新用户之后的一键预设被误迁。须在启动 loadAll 回填之前调用。 */
-export function migrateOpponentDefaults() {
-  if (read(K.migrations, null)?.oppDefaultsV2) return;
+ *  防止新用户之后的一键预设被误迁。须在启动 loadAll 回填之前调用。
+ *  force=true 供 importAll 使用：旧备份（无 oppDefaultsV2 标记）导入时无视本机标记强制迁移，
+ *  标记随备份走（exportAll 写入 data.oppDefaultsV2），新备份再导入不会误抹主动标注。 */
+export function migrateOpponentDefaults(force = false) {
+  if (!force && read(K.migrations, null)?.oppDefaultsV2) return;
   const list = read(K.opponents, []);
   write(K.opponents, list.map(o => o.type === 'TAG' ? { ...o, type: null } : o));
   write(K.migrations, { oppDefaultsV2: true });
