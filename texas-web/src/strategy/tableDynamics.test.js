@@ -20,13 +20,29 @@ describe('tableDynamics', () => {
   });
 });
 
-describe('tableProfile null 类型兜底', () => {
-  it('type=null 按 TAG 中性参数计入桌画像（与 TAG 一致）', async () => {
-    const { tableProfile } = await import('./tableDynamics.js');
-    const withNull = tableProfile([{ type: null }, { type: null }, { type: null }]);
-    const withTag = tableProfile([{ type: 'TAG' }, { type: 'TAG' }, { type: 'TAG' }]);
-    expect(withNull.vpipAvg).toBe(withTag.vpipAvg);
-    expect(withNull.aggrAvg).toBe(withTag.aggrAvg);
-    expect(withNull.label).toBe(withTag.label);
+describe('tableProfile 未标定对手处理（批次13，用户反馈：默认对手不该得出紧凶桌结论）', () => {
+  it('全部未标定且无观察 → null（不下桌风结论，UI 显示未标定提示）', () => {
+    expect(tableProfile([{ type: null }, { type: null }, { type: null }])).toBeNull();
+  });
+  it('未标定但有充分观察（≥20手）→ 以观察 VPIP 计入；凶轴无标注数据不虚设', () => {
+    const p = tableProfile([
+      { type: null, handsSeen: 30, vpipObs: 55 },
+      { type: null, handsSeen: 25, vpipObs: 61 },
+    ]);
+    expect(p.label).toBe('松弱桌'); // vpipAvg=58 >35，凶轴无数据按 0（非凶）
+    expect(p.vpipAvg).toBe(58);
+    expect(p.aggrAvg).toBe(0);
+  });
+  it('混合：已标定参与双轴，未标定无观察被排除（不被稀释成别的桌风）', () => {
+    const p = tableProfile([
+      { type: 'loose-passive' }, { type: 'loose-passive' },
+      { type: null }, { type: null },
+    ]);
+    expect(p.label).toBe('松弱桌');
+    expect(p.basedOn).toBe(2); // 供 UI 显示覆盖度「2/4」
+  });
+  it('已标定≥2 → basedOn=总数（不显示覆盖度提示）', () => {
+    const p = tableProfile([{ type: 'TAG' }, { type: 'TAG' }]);
+    expect(p.basedOn).toBe(2);
   });
 });

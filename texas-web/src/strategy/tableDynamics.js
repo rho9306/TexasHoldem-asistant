@@ -1,14 +1,20 @@
 import { TYPE_DEFAULTS } from './ranges.js';
 
+// 观察充分：看过 ≥20 手且记录过 VPIP（批次13）——观察到的真实 VPIP 优先于类型预设
+const observed = o => o.handsSeen >= 20 && o.vpipObs > 0;
+
 export function tableProfile(opponents) {
   if (!opponents || opponents.length < 2) return null;
-  const vpipOf = o => {
-    const d = TYPE_DEFAULTS[o.type] ?? TYPE_DEFAULTS.TAG;
-    return (o.handsSeen >= 20 && o.vpipObs > 0) ? o.vpipObs : d.vpip;
-  };
+  // 批次13（用户反馈）：未标定（type=null）且无充分观察的对手不参与画像——
+  // 「默认」是"没数据"，不该据此得出「紧凶桌」等结论。胜率数学仍按 TAG 兜底
+  // （ranges.maskForOpponent），只有这个展示层结论改为"无信号不判断"。
+  const vpipBase = opponents.filter(o => o.type != null || observed(o));
+  if (!vpipBase.length) return null;
+  const aggrBase = opponents.filter(o => o.type != null); // 凶弱轴只有标注类型才有数据
+  const vpipOf = o => observed(o) ? o.vpipObs : (TYPE_DEFAULTS[o.type] ?? TYPE_DEFAULTS.TAG).vpip;
   const aggrOf = o => (TYPE_DEFAULTS[o.type] ?? TYPE_DEFAULTS.TAG).aggression;
-  const vpipAvg = opponents.reduce((a, o) => a + vpipOf(o), 0) / opponents.length;
-  const aggrAvg = opponents.reduce((a, o) => a + aggrOf(o), 0) / opponents.length;
+  const vpipAvg = vpipBase.reduce((a, o) => a + vpipOf(o), 0) / vpipBase.length;
+  const aggrAvg = aggrBase.length ? aggrBase.reduce((a, o) => a + aggrOf(o), 0) / aggrBase.length : 0;
   const loose = vpipAvg > 35, tight = vpipAvg < 25, aggro = aggrAvg >= 50;
   let label = '均衡', adjustments = [];
   if (loose && !aggro) { label = '松弱桌';
@@ -19,7 +25,7 @@ export function tableProfile(opponents) {
     adjustments = ['尊重反击：3bet频率上调', '防守收窄：面对加注少跟注']; }
   else if (loose && aggro) { label = '松凶桌';
     adjustments = ['控池防守：对抗加注跟注标准收紧', '少诈唬：对手不轻易弃牌']; }
-  return { label, vpipAvg: +vpipAvg.toFixed(0), aggrAvg: +aggrAvg.toFixed(0), adjustments };
+  return { label, vpipAvg: +vpipAvg.toFixed(0), aggrAvg: +aggrAvg.toFixed(0), adjustments, basedOn: vpipBase.length };
 }
 
 export function adjustAdvice(adviceLevel, isBluffish, profile, enabled) {

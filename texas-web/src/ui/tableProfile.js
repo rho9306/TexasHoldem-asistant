@@ -7,12 +7,16 @@ export function renderTableProfile(container, opponents, autoOn) {
   const el = document.createElement('div');
   el.className = 'card';
   if (!p) {
-    el.innerHTML = '<span class="dim">🎯 均衡（对手≥2人后显示全桌画像）</span>';
+    // 两种无画像：人不够（<2）vs 有≥2人但全部未标定无观察（批次13）
+    el.innerHTML = opponents.length < 2
+      ? '<span class="dim">🎯 均衡（对手≥2人后显示全桌画像）</span>'
+      : '<span class="dim">🎯 暂无画像：对手未标定（点对手卡或牌桌座位标类型后显示）</span>';
   } else {
     const color = p.label.includes('松') ? 'var(--orange)' : 'var(--blue)';
+    const coverage = p.basedOn < opponents.length ? ` · ${p.basedOn}/${opponents.length}已标定` : '';
     const main = document.createElement('span');
     main.style.color = color;
-    main.textContent = `🎯 ${p.label}（VPIP≈${p.vpipAvg}%）`;
+    main.textContent = `🎯 ${p.label}（VPIP≈${p.vpipAvg}%${coverage}）`;
     const sub = document.createElement('span');
     sub.className = 'dim';
     sub.textContent = autoOn ? `→ ${p.adjustments[0]}` : '（自动适配已关闭，仅显示不修正）';
