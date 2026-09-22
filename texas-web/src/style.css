@@ -39,6 +39,14 @@ button, .tap { min-height: 44px; }                     /* 触控目标约束 */
 select, input[type="checkbox"] { min-height: 44px; }
 .btn-danger { color: var(--danger); }
 
+/* ---- 批次12：位置条加/减步进按钮（原为无样式默认按钮，又窄又小难点）---- */
+.stp {
+  min-width: 44px; min-height: 44px; padding: 0 14px;
+  font-size: 18px; font-weight: 700; line-height: 1;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text);
+}
+
 /* ---- Batch B：全屏浮层（牌桌页 / 桌面端 GTO图 / 设置 共用 overlay 模式）---- */
 .fs-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; display: flex; flex-direction: column; }
 .fs-head { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; }

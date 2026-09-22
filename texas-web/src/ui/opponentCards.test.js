@@ -53,4 +53,14 @@ describe('renderOpponentCards', () => {
     expect(card.textContent).toContain('默认');
     expect(card.textContent).not.toContain('紧凶');
   });
+  it('compact 模式（批次12）：不渲染一键预设与＋（手机端加对手走牌桌页），默认模式渲染', () => {
+    document.body.innerHTML = '<div id="oc"></div>';
+    renderOpponentCards(document.getElementById('oc'),
+      { opponents: [], onEdit() {}, onAdd() {}, onPreset() {}, compact: true });
+    expect(document.querySelector('#opp-add')).toBeNull();
+    expect(document.querySelector('#opp-preset')).toBeNull();
+    renderOpponentCards(document.getElementById('oc'), { opponents: [], onEdit() {}, onAdd() {}, onPreset() {} });
+    expect(document.querySelector('#opp-add')).toBeTruthy();
+    expect(document.querySelector('#opp-preset')).toBeTruthy();
+  });
 });

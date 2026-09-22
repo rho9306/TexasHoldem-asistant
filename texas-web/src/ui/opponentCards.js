@@ -29,16 +29,19 @@ export const TYPE_LABEL = {
 };
 
 /**
- * renderOpponentCards(container, { opponents, onEdit, onAdd, onPreset })
+ * renderOpponentCards(container, { opponents, onEdit, onAdd, onPreset, compact })
  *   opponents — 档案数组（含 handsSeen / vpipObs）
+ *   compact（批次12）— 手机端紧凑模式：不渲染「一键全员设为紧凶」与「＋」，
+ *   加/减对手统一走「🪑 牌桌」页调人数（标题行只留 牌桌/下一轮，省宽度）
  *   VPIP 观察值仅当 handsSeen ≥ 20 且 vpipObs 存在时显示
  */
-export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPreset }) {
+export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPreset, compact }) {
   container.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'card';
+  const quick = compact ? '' : '<span><button id="opp-preset">一键全员设为紧凶</button> <button id="opp-add">＋</button></span>';
   wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;">
-      <b>对手档案</b><span><button id="opp-preset">一键全员设为紧凶</button> <button id="opp-add">＋</button></span></div>
+      <b>对手档案</b>${quick}</div>
     <div class="opp-list" style="display:flex;overflow-x:auto;gap:8px;padding:8px 0;"></div>`;
   container.appendChild(wrap);
 
@@ -59,6 +62,8 @@ export function renderOpponentCards(container, { opponents, onEdit, onAdd, onPre
     card.addEventListener('click', () => onEdit(o));
     list.appendChild(card);
   }
-  wrap.querySelector('#opp-add').addEventListener('click', () => onAdd());
-  wrap.querySelector('#opp-preset').addEventListener('click', () => onPreset());
+  if (!compact) {
+    wrap.querySelector('#opp-add').addEventListener('click', () => onAdd());
+    wrap.querySelector('#opp-preset').addEventListener('click', () => onPreset());
+  }
 }

@@ -230,6 +230,7 @@ function buildCalc(pageRoot, inputRoot, resultRoot, split) {
   root.appendChild(step3Row);
   renderOpponentCards(add(), {
     opponents: state.opponents,
+    compact: !split, // 手机紧凑模式：标题行只留 牌桌/下一轮，加对手走牌桌页调人数（批次12）
     onAdd: () => { setPatch({ opponents: [...state.opponents, opponentDefaults()] }); saveOpponents(state.opponents); refresh(); }, // 新对手 type=null：界面不预设标签
     onPreset: () => {
       setPatch({ opponents: state.opponents.map(o => ({ ...o, type: 'TAG', looseness: TYPE_DEFAULTS.TAG.looseness, aggression: TYPE_DEFAULTS.TAG.aggression })) });
