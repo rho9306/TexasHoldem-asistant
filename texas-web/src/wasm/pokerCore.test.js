@@ -1,21 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// mock 掉真实 emscripten 胶水：只验证包装器把 locateFile 传给了 createPokerCore
-// （回归防护：部署站曾因胶水按 scriptDirectory 拼 wasm 路径 + vite 不发 .wasm 资产 → 引擎 404）
-const createPokerCore = vi.fn(() => Promise.resolve({ engine: true }));
+// mock 掉真实 emscripten 胶水：只验证包装器把内联 wasmBinary 传给了 createPokerCore
+// （回归防护批次9：部署站曾因胶水按 scriptDirectory 拼 wasm 路径 + vite 不发 .wasm 资产 → 引擎 404；
+//   批次17：wasm 以 base64 内联经 wasmBinary 直传，引擎零网络请求）
+// vi.hoisted：胶水现被静态导入，mock 工厂在模块图解析期求值，须先于测试文件顶层 const
+const { createPokerCore } = vi.hoisted(() => ({
+  createPokerCore: vi.fn(() => Promise.resolve({ engine: true })),
+}));
 vi.mock('./poker_core.js', () => ({ default: { createPokerCore } }));
 
 import { getCore, warmEngine } from './pokerCore.js';
 
 describe('pokerCore 加载器', () => {
-  it('向 createPokerCore 传 locateFile（指向 vite 发出的 wasm 资产），且并发调用只初始化一次', async () => {
+  // 批次17：引擎随页面加载——wasm 以 base64 内联进主包，经 instantiateWasm 钩子
+  // 字节级实例化（此版胶水不读 wasmBinary；不再发起任何引擎资产网络请求），
+  // 根治弱网/生命周期重建下的加载失败
+  it('向 createPokerCore 传 instantiateWasm 钩子（接线正确），且并发只初始化一次', async () => {
     const [a, b] = await Promise.all([getCore(), getCore()]);
     expect(a).toBe(b); // 单例：同一份引擎实例
     expect(a).toEqual({ engine: true });
     expect(createPokerCore).toHaveBeenCalledTimes(1);
     const opts = createPokerCore.mock.calls[0][0];
-    expect(typeof opts.locateFile).toBe('function');
-    expect(opts.locateFile('poker_core.wasm')).toContain('poker_core.wasm');
+    expect(typeof opts.instantiateWasm).toBe('function');
+    // 内联字节 → 真实 Instance 的端到端证明在 pokerCore.realwasm.test.js（真实胶水提供 import 对象）
   });
 
   // 批次16：启动预热——与 getCore 共享单例，成功后 wasm/胶水经 SW 入缓存
