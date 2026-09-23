@@ -48,7 +48,16 @@ export async function recalc() {
       setPatch({ result: { error: '跟注不能超过有效筹码，请修正输入' } });
       return;
     }
-    const core = await getCore();
+    // 批次16：引擎加载失败单独提示（网络/缓存问题，刷新可重试），
+    // 不再与计算异常混为一句——此前任何异常都被兜底成「加载计算引擎失败」误导排查
+    let core;
+    try {
+      core = await getCore();
+    } catch (e) {
+      console.error('engine load failed:', e);
+      setPatch({ result: { error: '计算引擎加载失败：网络不畅或缓存未就绪，请检查网络后刷新重试' } });
+      return;
+    }
 
     // 对手位置简化为 MP（设计§5.7 已声明第一版位置简化）
     const role = state.raisesBefore > 0 ? 'defend' : 'open';
@@ -88,7 +97,8 @@ export async function recalc() {
     }
   } catch (e) {
     console.error('recalc failed:', e);
-    setPatch({ result: { error: '加载计算引擎失败，请刷新' } });
+    // 批次16：计算环节异常如实展示真实原因，控制台保留完整错误供排查
+    setPatch({ result: { error: `计算出错：${e?.message || e}` } });
   }
 }
 

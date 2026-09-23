@@ -16,6 +16,7 @@ vi.mock('./wasm/pokerCore.js', () => {
       calculateEquityV2Js: () => ({ winRate: 0.6, tieRate: 0.05, lossRate: 0.35, rangeStats: [] }),
       evaluateDecision: () => ({ advice: 'call', adviceLevel: 'call', evCall: 1.5, evRaise: 0.8, requiredEquity: 0.2 }),
     })),
+    warmEngine: vi.fn(),
   };
 });
 
@@ -159,5 +160,18 @@ describe('牌局结算（批次15）', () => {
     setPatch({ hand: ['As'], settled: false });
     window.__recordHand();
     expect(JSON.parse(localStorage.getItem('texas.hands') ?? '[]')).toHaveLength(0);
+  });
+});
+
+describe('启动预热（批次16）', () => {
+  // vitest 5 每用例清 mock 计数，import 期调用在用例内不可见：
+  // resetModules 后重新求值 main.js，断言其启动代码调用了「当前实例」的 warmEngine
+  // ⚠️ 本用例重求值 main.js 会重跑模块级启动代码（DOM 装配/监听器/loadAll）——
+  // 新增用例勿置于本文件此用例之后（同批次14「tablePage.test 新用例放文件末尾」约定）
+  it('main.js 装载即后台预热引擎（成功经 SW 入缓存；失败静默由 recalc 重试）', async () => {
+    vi.resetModules();
+    const { warmEngine: freshWarm } = await import('./wasm/pokerCore.js');
+    await import('./main.js'); // 重新求值模块级启动代码（含末尾 warmEngine()）
+    expect(freshWarm).toHaveBeenCalled();
   });
 });

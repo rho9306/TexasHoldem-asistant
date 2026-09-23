@@ -19,6 +19,7 @@ import { renderSettingsPage } from './ui/settingsPage.js';
 import { renderSessionBar } from './ui/sessionBar.js';
 import { buildHandRecord, deleteSession, loadAll, migrateOpponentDefaults, saveHands, saveSessions, saveOpponents, saveSettings, updateOpponentObservation } from './storage.js';
 import { exportAll, importAll } from './exporter.js';
+import { warmEngine } from './wasm/pokerCore.js';
 import { renderHistoryPage } from './ui/historyList.js';
 import { renderReviewCard } from './ui/reviewCard.js';
 import { openTablePage, openFullScreen, renderTableInto, nextRound } from './ui/tablePage.js';
@@ -524,3 +525,4 @@ const saved = loadAll();
 if (saved.settings) setPatch({ settings: { ...state.settings, ...saved.settings } });
 if (saved.opponents?.length) setPatch({ opponents: saved.opponents });
 refresh();
+warmEngine(); // 批次16：启动即后台预热引擎（成功经 SW 入缓存；失败静默，选牌时自动重试）
