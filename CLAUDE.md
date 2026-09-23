@@ -2,8 +2,8 @@
 
 > **本文档用途：** 记录项目每一步进展和未来计划。任何 AI 助手接手本项目前，**必须先完整阅读本文档**，了解项目现状后再继续工作。每次完成新步骤后，AI 必须更新本文档。
 
-**最后更新：** 2026-09-23（第六轮·批次 16 引擎预热+报错真实化完成，155 测试全绿；**用户已授权：以后每批次做完直接推送**，推送遇 github.com 间歇不通时退避重试即可）
-**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-16（核心闭环：选牌→建议→结算→筹码连续→复盘）。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）、筹码体系候选方向（§10.5.4）、各批次留档 Minor（§10.4）
+**最后更新：** 2026-09-23（第六轮·批次 17 引擎内联进主包完成，157 测试全绿；**用户已授权：以后每批次做完直接推送**，推送遇 github.com 间歇不通时退避重试即可）
+**当前阶段：** 🎉 已上线：https://rho9306.github.io/TexasHoldem-asistant/ · 第六轮批次 1-17（核心闭环：选牌→建议→结算→筹码连续→复盘）。剩余待办：真机验收（§8.2，需用户执行）、用户后续新反馈迭代（§10.5）、筹码体系候选方向（§10.5.4）、各批次留档 Minor（§10.4）
 
 ---
 
@@ -137,6 +137,7 @@ Texas/
 - [x] 2026-09-21 **第六轮批次 7（Polish：底池默认空+对手默认未标定）**：代码提交 da81b4b、审查通过（数学等价性三路推演确认）、105/105 测试——2026-09-22 已推送上线（随 bedeef3）
 - [x] 2026-09-22 **第六轮批次 8-15 完成（上线后迭代第二批，全部"实现+独立审查"双裁定后推送上线）**：8 存量对手迁移（TAG→默认一次性，标记随备份走）→ 9 引擎 wasm 加载修复（部署站首次真正可用）→ 10 行动建议（check/跟/加/弃+金额）→ 11 删除会话/人数上限/SW 缓存击穿修复 → 12 UI 紧凑+大按钮 → 13 桌画像「无信号不判断」→ 14 下一轮=新手清空 → 15 牌局结算（弹窗定输赢，筹码跨手连续）。测试基线 105→150，详录见 §十.1/10.2
 - [x] 2026-09-23 **第六轮批次 16 完成（引擎预热+报错信息真实化，"实现+独立审查"双裁定后推送）**：起因=用户部署站「选完牌报引擎加载失败且刷新无效」，排查实证部署产物链健康（index/入口/胶水/wasm 全 200+MIME 正确+Node 实例化计算复验通过），根因=用户浏览器 SW 缓存钉死旧版+引擎文件从未入缓存。修复=①main.js 启动调 warmEngine() 后台预热引擎（成功经 SW 入缓存，弱网/离线可用；失败静默重试）②calc.js 错误路径拆分（加载失败→网络指引；计算异常→「计算出错：真实原因」）。测试基线 150→155，详录见 §十.1/10.2
+- [x] 2026-09-23 **第六轮批次 17 完成（引擎内联进主包，引擎网络请求 2→0，"实现+独立审查"双裁定后推送）**：批次16 上线后用户多设备复测仍报错（原窗口/无痕/另一台新电脑全中）→ 根因升级定性：引擎是**页面加载后按需发起的独立请求**（胶水 chunk+wasm），在用户网络环境（国内访问 github.io 间歇不通，疑似 URL 关键词/连接特征拦截——页面 URL 无敏感词能过、`poker_core.*` 被卡）下极易失败，预热只提前时机不消除请求。方案=wasm 以 `?inline` base64 进入口包（65→170KB，gzip 23→66KB）+ 胶水动态 import 改静态 + 此版精简胶水不读 wasmBinary 选项、改用其唯一支持的 `instantiateWasm(info, receiveInstance)` 钩子字节级实例化。效果：**页面能打开引擎就一定在**（弱网/断网/后台回收恢复/按 URL 拦截全部免疫）。新增 pokerCore.realwasm.test.js（真实胶水+内联 wasm 端到端集成测试，CI 永久守护）+ handFlow.test.js（下一轮跨手流程回归）转正。测试基线 155→157，详录见 §十.1/10.2
 
 ---
 
@@ -226,7 +227,7 @@ Texas/
 
 - em++ 前：`export EMSDK_PYTHON=/c/Users/36327/AppData/Local/Programs/Python/Python311/python.exe && source /c/emsdk/emsdk_env.sh`
 - 引擎测试命令需 `-Icore` 且输出 `.cjs`（Node24 下 emscripten 产物必须 .cjs 后缀才能 require）
-- 测试基线：**155 vitest + 6 引擎基准全绿**；`npm run build` 通过；改 SW 后需手更 CACHE 版本号（`texas-web/public/sw.js`）；发布时同步手更设置页「关于」的批次号（settingsPage.js）
+- 测试基线：**157 vitest + 6 引擎基准全绿**；`npm run build` 通过；改 SW 后需手更 CACHE 版本号（`texas-web/public/sw.js`）；发布时同步手更设置页「关于」的批次号（settingsPage.js）；**批次17 起引擎内联进入口包（dist 无独立 .wasm/.js 引擎 chunk）——重编译引擎（`npm run build:wasm`）后产物仍放 `src/wasm/`，vite 经 assetsInclude+?inline 自动打进主包，无需改接线**
 - **vitest 5.0.1 行为注意：每用例自动清空 mock 调用记录**（等价 clearMocks）——断言 import 期副作用或跨用例调用计数会假失败，须用 `vi.resetModules()` 取全新模块实例做自包含断言（批次16 踩过，样例见 pokerCore.test.js / main.test.js 启动预热用例）
 - 进度台账：`.git/sdd/progress.md`（每任务提交区间/修复回合/全部 Minor 裁量记录）；任务简报/报告/审查包都在 `.git/sdd/`
 
@@ -342,7 +343,8 @@ Texas/
 | 13 | **桌画像「无信号不判断」**（用户反馈：全默认对手却显示「紧凶桌 VPIP=22%"）：批次7 的 TAG 兜底从胜率数学泄漏到展示层——tableProfile 现排除「未标定且无充分观察（<20手）」的对手；全无信号→null（UI 显示「暂无画像」）；部分覆盖→显示「n/m已标定」；观察 VPIP（≥20手，含 0）优先于类型预设；**胜率数学 TAG 兜底不变**（推翻批次7 等价设计仅限本展示层，测试同步改写）。审查回环 2 条 Important：①observed() `vpipObs>0`→`!=null`（25手全弃的真紧手曾被当没数据）②buildHandRecord 无画像桌存「未标定」不再虚构「均衡」。留档：aggrAvg=0 时 label 含"弱"字属推断（凶轴无数据），下批次处理 | **8eae498 + c36f35c** | ✅ Needs fixes→回环后达 Approved 标准（2 Important 已修） | **138/138** |
 | 14 | **下一轮=新手清空**（用户需求）：nextRound() 内统一清空 hand/board/pot/call/myStack（+oppStack，审查回环：potForm 曾同步 oppStack=myStack，漏掉残留 effectiveStack 脏值）+result/strategy+选牌器半选；对手档案/会话/设置跨手保留；FIELD_DEFAULTS 从 potForm 导出为单一默认值来源；新增 onAfterNext 回调（浮层/内嵌下一轮后立即 refresh 计算页，桌面内嵌此前从不刷新）。测试须放文件末尾（dealerSeat 模块级累积）。留档：清空后立即点「记录本手」会入库空手记录（既有行为非本批回归，可加守卫） | **d2e4165 + 8a3b300** | ✅ Needs fixes→回环后达 Approved 标准（oppStack 1 Important 已修） | **140/140** |
 | 15 | **牌局结算**（用户澄清真实需求：赢/输筹码怎么进后手、与复盘挂钩）：`strategy/settle.js` settleNet 纯函数（赢=+底池 P、输=−跟注 C、弃=0 沉没成本不追；金额可改覆盖加注输）；「记录本手」→结算弹窗（默认开，设置页可关，旧档视为开）→ 盈亏入库（EV双曲线/会话累计首次有真数据）→ **后手筹码增减跨手连续**（nextRound 结算开时保留 myStack，关时回 100）；空手守卫（闭环批次14留档）。审查回环 3 件：settled 标记防同一手重复入库双扣筹码（换牌/清牌/下一轮清除）、ESC 关弹窗清节点、空输入不静默记 0。留档：多人桌 oppStack 随英雄同扣属单挑口径简化 | **47c908f + 回环** | ✅ Approved（回环后 150/150） | **150/150** |
-| 16 | **引擎预热+报错真实化**（用户实测：部署站选完牌报「引擎加载失败」且刷新无效；排查实证产物链健康、根因=用户浏览器 SW 钉死旧版+引擎文件未入缓存）：①`pokerCore.js` 新导出 `warmEngine()`，main.js 启动末尾调用——后台实例化引擎，成功后胶水+wasm 响应经 SW fetch 处理器入缓存（弱网/离线二次访问可用+首牌免等待），失败静默（仅 console.debug，corePromise 复位、recalc 自动重试）②calc.js 错误路径拆分：getCore 失败→「计算引擎加载失败：网络不畅或缓存未就绪…」（内层 try+return），其余异常→「计算出错：真实 message」，console.error 双双保留。sw.js CACHE v4→v5；新增 recalc happy-path 覆盖。审查 Approved（0阻塞）；3 Minor：main.test 重求值用例勿置其后（已注释约定）、warmup debug 日志（已当场加）、探针脚本用后即删（已删） | 见 git log | ✅ Approved | **155/155** |
+| 16 | **引擎预热+报错真实化**（用户实测：部署站选完牌报「引擎加载失败」且刷新无效；排查实证产物链健康、根因=用户浏览器 SW 钉死旧版+引擎文件未入缓存）：①`pokerCore.js` 新导出 `warmEngine()`，main.js 启动末尾调用——后台实例化引擎，成功后胶水+wasm 响应经 SW fetch 处理器入缓存（弱网/离线二次访问可用+首牌免等待），失败静默（仅 console.debug，corePromise 复位、recalc 自动重试）②calc.js 错误路径拆分：getCore 失败→「计算引擎加载失败：网络不畅或缓存未就绪…」（内层 try+return），其余异常→「计算出错：真实 message」，console.error 双双保留。sw.js CACHE v4→v5；新增 recalc happy-path 覆盖。审查 Approved（0阻塞）；3 Minor：main.test 重求值用例勿置其后（已注释约定）、warmup debug 日志（已当场加）、探针脚本用后即删（已删） | 48a08e0 | ✅ Approved | **155/155** |
+| 17 | **引擎内联进主包**（批次16 后多设备复测仍报错→根因升级：引擎是按需独立请求，用户网络对 `poker_core.*` 的二次请求极易失败，预热不消除请求）：`poker_core.wasm?inline` base64 进入口包（双配置 assetsInclude 放行 .wasm）+ 胶水动态 import 改静态 + CJS 互操作三形状归一（resolveCreatePokerCore）+ 此版精简胶水不读 wasmBinary、改用 `instantiateWasm(info, receiveInstance)` 钩子字节级实例化。dist 不再有独立引擎资产。新增 **realwasm 集成测试**（真实胶水+内联字节端到端，无 mock）+ handFlow 跨手回归转正。入口 65→170KB（gzip 23→66）。审查 Approved（0阻塞）；2 Minor：钩子失败路径 getCore 挂起（留档，风险近零）、handFlow 注释/调试输出（已当场清） | 见 git log | ✅ Approved | **157/157** |
 
 期间文档提交：1365cf4（使用说明产出）、2827444、8f1dacc、9cf64d2（各批次说明同步）。
 
@@ -363,6 +365,7 @@ Texas/
 - **下一轮=新手（批次14）**：清空收敛在 `nextRound()` 单点（手机快捷钮/浮层/内嵌三入口天然一致）——清 hand/board/pot/call/半选/result/strategy，对手档案/会话/设置保留；结算开时 myStack 保留（见批次15）；`onAfterNext` 回调供调用方 refresh（桌面内嵌此前从不刷新）。**tablePage.test 新用例必须放文件末尾**（dealerSeat/roundCount 模块级累积，插入早期会污染既有用例）
 - **牌局结算（批次15）**：`settleNet` 口径=赢 +底池P / 输 −跟注C / 弃 0（沉没成本不追；加注输的金额弹窗可改）。「记录本手」→结算弹窗（`settings.settlement` 默认开、**旧档无键视为开**）→ 盈亏入库（EV双曲线/会话累计自此有真数据）→ `myStack=max(0,myStack+net)` 跨手连续；`state.settled` 标记防同一手重复入库双扣筹码（换牌/清牌/下一轮三处清除）；空手守卫拒记录；FIELD_DEFAULTS（potForm 导出）为底池默认值单一来源，nextRound 复用
 - **引擎预热与报错拆分（批次16）**：`warmEngine()=getCore().catch(debug)` 零新增状态——预热失败的处理收敛在 getCore 既有「失败复位 corePromise」重试机制里，warmEngine 与 recalc 并发共享单例只初始化一次；SW 缓存路径靠既有 fetch 处理器（GET+res.ok 即 put），**无需把 hash 文件名写进 sw.js 预缓存清单**（避免构建耦合）。报错拆分语义：**「计算引擎加载失败」=网络/缓存问题（刷新重试）、「计算出错：×」=应用 bug（反馈排查）**——后续用户报错先看是哪句。排查方法论留档：凡「部署站异常」先实证产物链（curl index→入口→胶水→wasm 全 200+MIME+Node 实例化复验），再查浏览器持久层（SW 缓存/localStorage）——内存态问题刷新必好，**刷新无效=问题在持久层**（SW 缓存/settings/opponents）
+- **引擎内联（批次17）**：两个硬知识——①**此版 emscripten 精简胶水不读取 `Module['wasmBinary']`**（内部 `var wasmBinary` 无 Module 赋值点），字节注入必须走其唯一支持的 `instantiateWasm(info, receiveInstance)` 钩子（约定：异步实例化后调 `receiveInstance(instance)`，胶水外包 Promise）；②**vite 对 .wasm 不在默认资产类型内**：`?url` 能绕过资产管线而 `?inline` 必须配 `assetsInclude:['**/*.wasm']`（vite.config 与 vitest.config 双处同步，漏一处则 vitest/dev 与 prod 行为分叉）。CJS 互操作三形状并存（vite 构建 interop 的 default.createPokerCore / vitest 原样 CJS 的 default 即函数 / 测试 mock）→ 归一函数 `resolveCreatePokerCore`。**「页面能打开引擎就一定在」从此成立**——引擎失败类反馈应绝迹，若再现必然是「计算出错：×」路径。诊断方法论升级：多设备复测（新设备无持久层污染）可把「环境问题」与「产物/网络问题」一刀切开
 
 ### 10.3 ✅ 暂停已解除——恢复步骤执行完毕（2026-09-22）
 
@@ -386,6 +389,7 @@ Texas/
 - **批次13 桌画像**：aggrAvg=0（纯观察对手）时「松弱桌」label 的"弱"字属推断（凶轴无数据）——可加 aggrKnown 字段细化文案
 - **批次15 结算**：多人桌 oppStack 随英雄同扣（单挑口径简化，工具定位可接受）；结算弹窗 showModal 不可用的非模态降级路径基本死代码；myStack 为会话内存（刷新页面回 100，未持久化——如需跨刷新保留可入 settings）
 - **批次16 预热/报错**：main.test.js「启动预热」用例会重求值 main.js 重跑模块级启动代码——**新增用例勿置于其后**（测试文件内已注释约定，同批次14 惯例）；warmEngine 失败仅 console.debug（线上预热持续失败无醒目日志，靠 recalc 报错补位，可接受）；「计算出错：×」直接暴露原始 message（英文 embind 文案对用户略生硬，换真实性的有意取舍）
+- **批次17 内联**：instantiateWasm 钩子失败路径只 console.error、不向胶水传播拒绝——此版胶水钩子包装只暴露 resolve，实例化失败时 getCore 会**永久挂起**（不报错也不复位 corePromise）；实际风险近零（内联字节随包而来，失败仅剩构建产物损坏这一近不可能路径），若未来要严谨可在 catch 中复位 corePromise + 超时兜底。入口 170KB（gzip 66KB）对单页 PWA 首屏影响可接受（cache-first 只下一次）
 - （第五轮及之前的全部 Minor 留档见 §8.4 与 progress.md，终审已逐条裁量）
 
 ### 10.5 待办总览（合并 §五 上线后迭代节）
